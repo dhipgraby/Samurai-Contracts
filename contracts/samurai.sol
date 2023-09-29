@@ -5,48 +5,67 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
-import "@openzeppelin/contracts/utils/Counters.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl {
-    using Counters for Counters.Counter;
+contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, Pausable {
 
-    string private _baseURIextended;
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    uint256 public _maxSupply = 666;
-    uint256 initialPrice = 190000000000000000; //Price in wei of 0.19 eth
-
-    Counters.Counter private _tokenIdCounter;
-
-    constructor() ERC721("TheLastBlood", "TLB") {
+    uint256 public initialPrice = 190000000000000000; // 0.19 ETH
+    uint256 public initialTokenPrice = 1000; // Example token price
+    address public ERC20TokenAddress; // Address of the ERC20 token to accept as payment
+    string private _baseURIextended;    
+    
+    constructor() ERC721("LastBloodLines", "LBL") {
         _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
     }
 
     modifier isValidToken(uint256 _tokenId) {
-        require(_tokenId <= 665, "Invalid token Id");
-        require(_tokenId >= 1, "Invalid token Id");
+        require(_tokenId >= 1 && _tokenId <= 666, "Invalid token Id");
         if (_exists(_tokenId)) revert TokenExist();
         _;
     }
 
-    function mint(uint256 tokenId) public payable isValidToken(tokenId) {
-        _tokenIdCounter.increment();
-        require(msg.value == initialPrice, "Incorrect amount");
-        require(_tokenIdCounter.current() <= _maxSupply, "Max supply reached");
-        _safeMint(msg.sender, tokenId);
-        _setTokenURI(tokenId, _baseURI());
+    function adminMint(address to, uint256 tokenId) public onlyRole(MINTER_ROLE) isValidToken(tokenId) whenNotPaused {
+        _mintToken(to, tokenId);
     }
 
-    function safeMint(
-        address to,
-        uint256 tokenId
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) isValidToken(tokenId) {
-        _tokenIdCounter.increment();
-        require(_tokenIdCounter.current() <= _maxSupply, "Max supply reached");
+    function userMint(uint256 tokenId) public payable isValidToken(tokenId) whenNotPaused {
+        require(msg.value == (tokenId == 666 ? 666 ether : initialPrice), "Incorrect amount");
+        _mintToken(msg.sender, tokenId);
+    }
+
+    function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) whenNotPaused {
+        IERC20 token = IERC20(ERC20TokenAddress);
+        require(token.transferFrom(msg.sender, address(this), initialTokenPrice), "Token transfer failed");
+        _mintToken(msg.sender, tokenId);
+    }
+
+    function setPrice(uint256 newPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        initialPrice = newPrice;
+    }
+
+    function setTokenPrice(uint256 newTokenPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        initialTokenPrice = newTokenPrice;
+    }
+
+    function setERC20TokenAddress(address newAddress) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        ERC20TokenAddress = newAddress;
+    }
+
+    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _pause();
+    }
+
+    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
+        _unpause();
+    }
+
+    function _mintToken(address to, uint256 tokenId) private {        
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, _baseURI());
     }
-
     // The following functions are overrides required by Solidity.
 
     function _beforeTokenTransfer(
@@ -75,7 +94,7 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl {
     )
         public
         view
-        override(ERC721, ERC721Enumerable, AccessControl)
+        override(ERC721, ERC721Enumerable, AccessControl,ERC721URIStorage)
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
