@@ -1,23 +1,27 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.9;
+pragma solidity 0.8.19;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721Enumerable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/access/AccessControl.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/security/Pausable.sol";
 
-contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, Pausable {
+contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl {
 
+    bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
-    uint256 public initialPrice = 190000000000000000; // 0.19 ETH
+    uint256 public initialPrice = 0.19 ether; // 0.19 ETH
     uint256 public initialTokenPrice = 1000; // Example token price
     address public ERC20TokenAddress; // Address of the ERC20 token to accept as payment
     string private _baseURIextended;    
     
+    error TokenExist();
+
+    event Minted(uint256 tokenId);
+
     constructor() ERC721("LastBloodLines", "LBL") {
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
     }
 
@@ -27,44 +31,37 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, P
         _;
     }
 
-    function adminMint(address to, uint256 tokenId) public onlyRole(MINTER_ROLE) isValidToken(tokenId) whenNotPaused {
+    function adminMint(address to, uint256 tokenId) public onlyRole(MINTER_ROLE) isValidToken(tokenId) {
         _mintToken(to, tokenId);
     }
 
-    function userMint(uint256 tokenId) public payable isValidToken(tokenId) whenNotPaused {
+    function userMint(uint256 tokenId) public payable isValidToken(tokenId) {
         require(msg.value == (tokenId == 666 ? 666 ether : initialPrice), "Incorrect amount");
         _mintToken(msg.sender, tokenId);
     }
 
-    function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) whenNotPaused {
+    function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) {
         IERC20 token = IERC20(ERC20TokenAddress);
         require(token.transferFrom(msg.sender, address(this), initialTokenPrice), "Token transfer failed");
         _mintToken(msg.sender, tokenId);
     }
 
-    function setPrice(uint256 newPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setPrice(uint256 newPrice) public onlyRole(ADMIN_ROLE) {
         initialPrice = newPrice;
     }
 
-    function setTokenPrice(uint256 newTokenPrice) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setTokenPrice(uint256 newTokenPrice) public onlyRole(ADMIN_ROLE) {
         initialTokenPrice = newTokenPrice;
     }
 
-    function setERC20TokenAddress(address newAddress) public onlyRole(DEFAULT_ADMIN_ROLE) {
+    function setERC20TokenAddress(address newAddress) public onlyRole(ADMIN_ROLE) {
         ERC20TokenAddress = newAddress;
-    }
-
-    function pause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _pause();
-    }
-
-    function unpause() public onlyRole(DEFAULT_ADMIN_ROLE) {
-        _unpause();
     }
 
     function _mintToken(address to, uint256 tokenId) private {        
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, _baseURI());
+        emit Minted(tokenId);
     }
     // The following functions are overrides required by Solidity.
 
@@ -100,11 +97,7 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, P
         return super.supportsInterface(interfaceId);
     }
 
-    function setBaseURI(string memory baseURI_) external {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, msg.sender),
-            "Must have admin role to set base URI"
-        );
+    function setBaseURI(string memory baseURI_) external onlyRole(ADMIN_ROLE) {
         _baseURIextended = baseURI_;
     }
 
@@ -112,5 +105,4 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, P
         return _baseURIextended;
     }
 
-    error TokenExist();
 }
