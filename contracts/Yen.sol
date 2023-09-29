@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.17;
+pragma solidity ^0.8.19;
 
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract YenToken is ERC20, Ownable {
-    uint256 public constant MAX_SUPPLY = 1000000 * (10 ** 18); // 1,000,000 tokens with 18 decimals
+    uint256 public constant MAX_SUPPLY = 1000000000 * (10 ** 18); // 1,000,000,000 tokens with 18 decimals
 
     constructor() ERC20("Yen", "YEN") {
-        uint256 initialAmount = 1000000;
+        uint256 initialAmount = 1000000 ether;
         _mint(msg.sender, initialAmount);
     }
 
@@ -24,8 +24,4 @@ contract YenToken is ERC20, Ownable {
         super._mint(account, amount);
     }
 
-    function approveForAll(address tokenAddress, address spender) public {
-        uint256 maxAllowance = type(uint256).max;
-        IERC20(tokenAddress).approve(spender, maxAllowance);
-    }
 }
