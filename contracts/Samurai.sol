@@ -10,8 +10,13 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /// @title Samurai NFT Contract
 /// @notice This contract handles the minting and management of Samurai NFTs.
-contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, ERC2981 {
-
+contract Samurai is
+    ERC721,
+    ERC721Enumerable,
+    ERC721URIStorage,
+    AccessControl,
+    ERC2981
+{
     /// @notice Role identifier for admin-level privileges
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     /// @notice Role identifier for minter-level privileges
@@ -23,18 +28,15 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     /// @notice Address of the ERC20 token used for payment
     address public erc20TokenAddress;
     /// @notice Base URI for metadata
-    string private _baseURIextended;    
-    
+    string private _baseURIextended;
+
     /// @notice Custom error to indicate that a token already exists
     error TokenExist();
 
     /// @notice Event emitted when a new token is minted
     /// @param to The address to mint the token to
     /// @param tokenId The ID of the minted token
-    event Minted(
-        address indexed to,
-        uint256 indexed tokenId
-    );
+    event Minted(address indexed to, uint256 indexed tokenId);
 
     /// @notice Emited when the Contract balance is withdrawn.
     /// @param balance Withdrawn balance.
@@ -43,18 +45,17 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     /// @notice Event emitted when a new royalty data is set
     /// @param royaltyReceiver Receiver of royalty amount
     /// @param feeNumerator The royalty fee in bips
-    event RoyaltySet(
-        address indexed royaltyReceiver, 
-        uint96 feeNumerator
-    );
+    event RoyaltySet(address indexed royaltyReceiver, uint96 feeNumerator);
 
     /// @notice Emited when tokens is withdrawn.
     /// @param token Withdrawn token
     /// @param amount Withdrawn amount
-    event WithdrawnTokens(
-        IERC20 indexed token, 
-        uint256 amount
-    );
+    event WithdrawnTokens(IERC20 indexed token, uint256 amount);
+
+    /// @notice Event emitted when Ether is received
+    /// @param sender Address of the sender
+    /// @param amount Amount of Ether received
+    event Received(address indexed sender, uint256 amount);
 
     /// @dev Checks if the token ID is valid and doesn't exist
     /// @param _tokenId The ID of the token to validate
@@ -66,24 +67,37 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
 
     /// @notice Initializes the contract, setting the roles for the deployer
     /// @dev Default feeNumerator is 10000, which is 10%
-    constructor(address payable _royaltyReceiver) ERC721("LastBloodLines", "LBL") {
+    constructor(
+        address payable _royaltyReceiver
+    ) ERC721("LastBloodLines", "LBL") {
         _grantRole(ADMIN_ROLE, msg.sender);
         _grantRole(MINTER_ROLE, msg.sender);
 
         _setDefaultRoyalty(_royaltyReceiver, 10000);
     }
-    
+
+    /// @notice Fallback function to accept Ether
+    receive() external payable {
+        emit Received(msg.sender, msg.value);
+    }
+
     /// @notice Allows an admin to mint a new token
     /// @param to The address to mint the token to
     /// @param tokenId The ID of the token to mint
-    function adminMint(address to, uint256 tokenId) public onlyRole(MINTER_ROLE) isValidToken(tokenId) {
+    function adminMint(
+        address to,
+        uint256 tokenId
+    ) public onlyRole(MINTER_ROLE) isValidToken(tokenId) {
         _mintToken(to, tokenId);
     }
 
     /// @notice Allows a user to mint a new token with ETH
     /// @param tokenId The ID of the token to mint
     function userMint(uint256 tokenId) public payable isValidToken(tokenId) {
-        require(msg.value == (tokenId == 666 ? 666 ether : initialPrice), "Incorrect amount");
+        require(
+            msg.value == (tokenId == 666 ? 666 ether : initialPrice),
+            "Incorrect amount"
+        );
         _mintToken(msg.sender, tokenId);
     }
 
@@ -92,7 +106,10 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     /// @dev requries ERC20 token approval to be given to this contract
     function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) {
         IERC20 token = IERC20(erc20TokenAddress);
-        require(token.transferFrom(msg.sender, address(this), initialTokenPrice), "Token transfer failed");
+        require(
+            token.transferFrom(msg.sender, address(this), initialTokenPrice),
+            "Token transfer failed"
+        );
         _mintToken(msg.sender, tokenId);
     }
 
@@ -110,17 +127,19 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
 
     /// @notice Sets the ERC20 token address for payments
     /// @param newAddress The new ERC20 token address
-    function setERC20TokenAddress(address newAddress) public onlyRole(ADMIN_ROLE) {
+    function setERC20TokenAddress(
+        address newAddress
+    ) public onlyRole(ADMIN_ROLE) {
         erc20TokenAddress = newAddress;
     }
 
     /// @dev Internal function to handle the minting logic
     /// @param to The address to mint the token to
     /// @param tokenId The ID of the token to mint
-    function _mintToken(address to, uint256 tokenId) private {        
+    function _mintToken(address to, uint256 tokenId) private {
         _safeMint(to, tokenId);
         _setTokenURI(tokenId, _baseURI());
-        emit Minted(to,tokenId);
+        emit Minted(to, tokenId);
     }
 
     function _beforeTokenTransfer(
@@ -153,7 +172,13 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     )
         public
         view
-        override(ERC721, ERC721Enumerable, AccessControl,ERC721URIStorage, ERC2981)
+        override(
+            ERC721,
+            ERC721Enumerable,
+            AccessControl,
+            ERC721URIStorage,
+            ERC2981
+        )
         returns (bool)
     {
         return super.supportsInterface(interfaceId);
@@ -174,12 +199,15 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     /// @notice Sets the global royalty information for all tokens.
     /// @param royaltyReceiver Receiver of royalty amount
     /// @param feeNumerator The royalty fee in bips
-    function resetRoyalties(address payable royaltyReceiver, uint96 feeNumerator) external onlyRole(ADMIN_ROLE) {
+    function resetRoyalties(
+        address payable royaltyReceiver,
+        uint96 feeNumerator
+    ) external onlyRole(ADMIN_ROLE) {
         _setDefaultRoyalty(royaltyReceiver, feeNumerator);
         emit RoyaltySet(royaltyReceiver, feeNumerator);
-    } 
+    }
 
-   /// @notice Allows the admin to withdraw Ether from the contract
+    /// @notice Allows the admin to withdraw Ether from the contract
     /// @param to The address to send Ether to
     function withdrawEther(address payable to) external onlyRole(ADMIN_ROLE) {
         uint256 balance = address(this).balance;
@@ -191,11 +219,13 @@ contract Samurai is ERC721, ERC721Enumerable, ERC721URIStorage, AccessControl, E
     /// @notice Allows the admin to withdraw ERC20 tokens from the contract
     /// @param contractAddress Token address to withdraw.
     /// @param to The address to send tokens to.
-    function withdrawTokens(address contractAddress, address to) external onlyRole(ADMIN_ROLE) {
+    function withdrawTokens(
+        address contractAddress,
+        address to
+    ) external onlyRole(ADMIN_ROLE) {
         IERC20 token = IERC20(contractAddress);
         uint256 amount = token.balanceOf(address(this));
         require(token.transfer(to, amount), "Token transfer failed");
         emit WithdrawnTokens(token, amount);
     }
-
 }
