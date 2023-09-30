@@ -7,7 +7,8 @@
   "license": "MIT",
   "scripts": {
     "compile": "npx hardhat compile",
-    "build": "npx harhat build"
+    "build": "npx harhat build",
+    "deploy-local": "npx hardhat run ./scripts/deploy.js --network localhost"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.2",
