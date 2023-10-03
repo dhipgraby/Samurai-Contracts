@@ -32,6 +32,7 @@
     "typescript": "^5.2.2"
   },
   "dependencies": {
+    "@chainlink/contracts": "^0.7.1",
     "@openzeppelin/contracts": "^4.9.3"
   }
 }
