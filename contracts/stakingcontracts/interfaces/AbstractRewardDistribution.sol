@@ -7,5 +7,5 @@ import "../AdminContract.sol";
 // @dev An abstract contract that provides an internal function for reward calculation and inherits from the AdminContract.
 abstract contract AbstractRewardDistribution is AdminContract {
 
-    function calculateRewards(uint256 amount, uint256 dayId, uint256 poolId) internal virtual returns (uint256);
+    function calculateRewards(uint256 amount, uint256 poolId) internal virtual returns (uint256);
 }

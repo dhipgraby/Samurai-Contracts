@@ -25,7 +25,7 @@ contract FeeContract is AdminContract {
     /// @dev Event emitted when stuck tokens are recovered.
     event TokensRecovered(address indexed admin, address token, uint256 amount);
 
-    constructor(address _feeTreasury) {
+    constructor(address payable _feeTreasury) {
         feeTreasury = FeeTreasury(_feeTreasury);
     }
 
@@ -33,16 +33,6 @@ contract FeeContract is AdminContract {
     /// @return The fee amount.
     function getFee() external view returns (uint256) {
         return fee;
-    }
-
-    /// @dev Internal function to handle fee deduction.
-    /// @param user The address of the user to deduct the fee from.
-    /// @return bool indicating whether the fee was successfully deducted.
-    function _deductFee(address user) internal returns (bool) {
-        require(msg.value == fee, "Incorrect fee amount");
-        feeTreasury.deposit{value: fee}();
-        emit FeeDeducted(user, fee);
-        return true;
     }
 
     /// @dev Function to update the fee.

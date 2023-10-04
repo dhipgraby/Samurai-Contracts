@@ -13,9 +13,10 @@ contract FeeTreasury is AdminContract {
 
     /// @dev Event emitted when stuck tokens are recovered.
     event TokensRecovered(address indexed admin, address token, uint256 amount);
-
-    function deposit() external payable {
-        // Transfer the fee to the FeeTreasury contract
+    event EtherReceived(address indexed sender, uint256 amount);
+    
+    receive() external payable {
+        emit EtherReceived(msg.sender, msg.value);
     }
 
     /// @notice Function to withdraw accumulated fees.
