@@ -7,12 +7,19 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 /// @notice This contract manages admin and operator roles.
 /// @dev It uses OpenZeppelin's AccessControlEnumerable for role-based access control.
 contract AdminContract is AccessControlEnumerable {
-    // Declare state variables for roles
+
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
 
     /// @notice Event emitted when any role is granted.
-    event GrantedRole(bytes32 indexed role, address indexed account);
+    /// @param role The role that was granted.
+    /// @param account The account that was granted the role.
+    event GrantedRole(
+        bytes32 indexed role, 
+        address indexed account
+    );
+
+    event RewardDeposited(address tokenAddress, uint256 amount);
 
     /// @dev Throws if called by any account other than admin.
     modifier onlyAdmin() {
@@ -36,14 +43,15 @@ contract AdminContract is AccessControlEnumerable {
     /// @dev Can only be called by an admin.
     /// @param account The address of the account to grant the operator role.
     function grantOperatorRole(address account) external onlyAdmin {
-        grantRole(OPERATOR_ROLE, account);
-        emit GrantedRole(OPERATOR_ROLE, account);
+       super.grantRole(OPERATOR_ROLE, account);
+
     }
 
     /// @notice Revokes the operator role from a specific account.
     /// @dev Can only be called by an admin.
     /// @param account The address of the account to revoke the operator role.
     function revokeOperatorRole(address account) external onlyAdmin {
-        revokeRole(OPERATOR_ROLE, account);
+        super.revokeRole(OPERATOR_ROLE, account);
     }
+
 }

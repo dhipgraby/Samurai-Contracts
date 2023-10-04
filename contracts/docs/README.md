@@ -50,7 +50,7 @@ The Staking Platform is a decentralized application that allows users to stake t
 
 ### Additional Contracts
 
-1. **Fee Contract**: Manages fees and integrates with Chainlink for dynamic adjustments.
+1. **Fee Contract**: manages the fee calculations  for the stakingpools
 2. **Reward Distribution Contract**: Handles reward distribution logic.
 
 ## Data Structures

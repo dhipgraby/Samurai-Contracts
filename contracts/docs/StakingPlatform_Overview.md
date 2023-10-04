@@ -24,9 +24,8 @@ This document outlines the architecture and logic of our Staking Pool Platform. 
 
 ### Fees
 
-- Staking Fee: $1.5 in Ethereum
-- Claiming Fee: $1 in Ethereum
-- Withdrawal Fee: $1.5 in ETH
+- Staking Fee: 0.0009 in Ethereum
+- Claiming Fee: 0.0009 in Ethereum
 
 ### Dynamic Reward Adjustment
 
