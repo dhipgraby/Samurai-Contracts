@@ -2,6 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { parseEther } from "ethers";
+import { mine } from "@nomicfoundation/hardhat-network-helpers";
 
 
 describe("Samurai Staking Platform", function () {
@@ -14,6 +15,28 @@ describe("Samurai Staking Platform", function () {
     await _yen.connect(admin).increaseAllowance(escrow.target, initialRewardBalance);
     await escrow.connect(admin).depositRewards(initialRewardBalance, _yen.target);
   }
+
+  const mineBlocks = async (blocks: number) => {
+      // instantly mine 1000 blocks
+      await mine(blocks);
+  }
+
+  const userStake = async (amount: string, user: any, yen: any, escrow: any, feeContract: any, oneDayStaking: any) => {
+    // Mint some tokens for the user
+    const initialUserBalance = parseEther(amount);
+    await yen.mint(user.address, initialUserBalance);
+  
+    // Approve the escrow contract to spend tokens
+    await yen.connect(user).approve(escrow.target, initialUserBalance);
+  
+    // Get the fee amount from the FeeContract
+    const feeAmount = await feeContract.getFee();
+  
+    // Stake tokens using OneDayStakingContract
+    const amountToStake = parseEther(amount);
+    const tx = await oneDayStaking.connect(user).stake(amountToStake, { value: feeAmount });
+    return tx;
+  }; 
 
   async function deployStakingFixture() {
     const [admin, user1, user2] = await ethers.getSigners();
@@ -146,12 +169,40 @@ describe("Samurai Staking Platform", function () {
       await expect(oneDayStaking.connect(user1).stake(0, { value: feeAmount })).to.be.revertedWith("Amount must be greater than zero");
     });
 
-    it("Should store the correct user staked amount in the escrow", async function () {
-      const { user1, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
-
-      
+    it("Should store the correct users staked amount in the escrow", async function () {
+      const { user1, user2, oneDayStaking, feeContract, yen, escrow } = await loadFixture(deployStakingFixture);
+      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake("100", user2, yen, escrow, feeContract, oneDayStaking);
+      const stake1 = await escrow.userStakeBalances(user1, 0);
+      const stake2 = await escrow.userStakeBalances(user2, 1);
+      expect(Number(stake1) / 1e18).to.equal(1000);
+      expect(Number(stake2) / 1e18).to.equal(100);
     })
-  
+
+    it("Should store the correct userStake information in the staking platform", async function () {
+      const { user1, user2, oneDayStaking, feeContract, yen, escrow, stakingPlatform } = await loadFixture(deployStakingFixture);
+      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake("2000", user2, yen, escrow, feeContract, oneDayStaking);
+      const stake1 = await stakingPlatform.userStakes(0);
+      const stake2 = await stakingPlatform.userStakes(1);
+
+      let reward1 = (Number(stake1.amount) * 5 / 100);
+      let reward2 = (Number(stake2.amount) * 5 / 100);
+      
+      // Validate the stake information
+      expect(stake1.stakeId).to.equal(0);
+      expect(stake1.user).to.equal(user1.address);
+      expect(stake1.amount).to.equal(parseEther("1000"));
+      expect(stake1.poolType).to.equal(0); // 0 is the poolType for one-day staking
+      expect(Number(stake1.reward)/ 1e18).to.equal(reward1 / 1e18);
+      
+      expect(stake2.stakeId).to.equal(1);
+      expect(stake2.user).to.equal(user2.address);
+      expect(stake2.amount).to.equal(parseEther("2000"));
+      expect(stake2.poolType).to.equal(0); // 0 is the poolType for one-day staking
+      expect(Number(stake2.reward)/ 1e18).to.equal(reward2 / 1e18);
+    });
+
   });
 
 });
