@@ -7,6 +7,8 @@ import "@openzeppelin/contracts/access/AccessControlEnumerable.sol";
 /// @notice This contract manages admin and operator roles.
 /// @dev It uses OpenZeppelin's AccessControlEnumerable for role-based access control.
 contract AdminContract is AccessControlEnumerable {
+    string private constant NOT_ADMIN_ERROR = "Caller is not an admin";
+    string private constant NOT_OPERATOR_ERROR = "Caller is not an operator";
 
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
     bytes32 public constant OPERATOR_ROLE = keccak256("OPERATOR_ROLE");
@@ -19,17 +21,15 @@ contract AdminContract is AccessControlEnumerable {
         address indexed account
     );
 
-    event RewardDeposited(address tokenAddress, uint256 amount);
-
     /// @dev Throws if called by any account other than admin.
     modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), "Caller is not an admin");
+        require(hasRole(ADMIN_ROLE, msg.sender), NOT_ADMIN_ERROR);
         _;
     }
 
     /// @dev Throws if called by any account other than operator.
     modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), "Caller is not an operator");
+        require(hasRole(OPERATOR_ROLE, msg.sender), NOT_OPERATOR_ERROR);
         _;
     }
 
@@ -39,19 +39,5 @@ contract AdminContract is AccessControlEnumerable {
         _setupRole(OPERATOR_ROLE, msg.sender);
     }
 
-    /// @notice Grants the operator role to a specific account.
-    /// @dev Can only be called by an admin.
-    /// @param account The address of the account to grant the operator role.
-    function grantOperatorRole(address account) external onlyAdmin {
-       super.grantRole(OPERATOR_ROLE, account);
-
-    }
-
-    /// @notice Revokes the operator role from a specific account.
-    /// @dev Can only be called by an admin.
-    /// @param account The address of the account to revoke the operator role.
-    function revokeOperatorRole(address account) external onlyAdmin {
-        super.revokeRole(OPERATOR_ROLE, account);
-    }
 
 }

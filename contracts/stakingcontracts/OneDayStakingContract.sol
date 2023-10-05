@@ -1,14 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./StakingPlatform.sol";
+import "./SamuraiStakingPlatform.sol";
 
 contract OneDayStakingContract {
     
-    StakingPlatform public stakingPlatform;
+    SamuraiStakingPlatform public stakingPlatform;
     
     constructor(address _stakingPlatform) {
-        stakingPlatform = StakingPlatform(_stakingPlatform);
+        stakingPlatform = SamuraiStakingPlatform(_stakingPlatform);
     }
     
     function stake(uint256 amount) external payable {
