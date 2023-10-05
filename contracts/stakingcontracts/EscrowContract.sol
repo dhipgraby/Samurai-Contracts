@@ -32,6 +32,7 @@ contract EscrowContract {
         _;
     }
 
+    /// @dev Modifier to check if the caller is the stakingPlatform.
     modifier onlyStakingPlatform() {
         require(msg.sender == address(_stakingPlatform), 
             NOT_STAKINGPLATFORM_ERROR
