@@ -3,17 +3,21 @@ pragma solidity 0.8.19;
 
 import "./interfaces/AbstractRewardDistribution.sol";
 import "./EscrowContract.sol";
-import "./PoolTypes.sol";
 
 /// @title ConcreteRewardDistribution
 /// @dev This contract extends the AbstractRewardDistribution to provide a concrete implementation for reward distribution.
-abstract contract ConcreteRewardDistribution is AbstractRewardDistribution, PoolTypes {
+contract ConcreteRewardDistribution is AbstractRewardDistribution {
     EscrowContract public escrow;
 
     mapping(PoolType => uint256) public rewardPercentages;
 
     /// @notice Mapping to keep track of user rewards
     mapping(address => uint256) public rewards;
+
+    event RewardPercentageUpdated(
+        PoolType indexed poolType, 
+        uint256 newPercentage
+    );
 
     constructor(address _escrowAddress) {
         escrow = EscrowContract(_escrowAddress);
@@ -32,7 +36,7 @@ abstract contract ConcreteRewardDistribution is AbstractRewardDistribution, Pool
     function _calculateRewards(
         uint256 amount,
         PoolType poolType
-    ) internal view returns (uint256) {
+    ) internal view override returns (uint256) {
         uint256 percentage = rewardPercentages[poolType];
         return (amount * percentage) / 100;
     }
@@ -40,7 +44,7 @@ abstract contract ConcreteRewardDistribution is AbstractRewardDistribution, Pool
     function calculateRewards(
         uint256 amount,
         PoolType poolType
-    ) external view returns (uint256) {
+    ) external view onlyAdmin returns (uint256) {
         return _calculateRewards(amount, poolType);
     }
 
@@ -52,5 +56,7 @@ abstract contract ConcreteRewardDistribution is AbstractRewardDistribution, Pool
         uint256 newPercentage
     ) external onlyAdmin {
         rewardPercentages[poolType] = newPercentage;
+        emit RewardPercentageUpdated(poolType, newPercentage);
     }
+
 }

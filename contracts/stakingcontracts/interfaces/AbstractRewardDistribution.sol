@@ -2,10 +2,20 @@
 pragma solidity 0.8.19;
 
 import "../AdminContract.sol";
+import "../PoolTypes.sol";
 
 // @title AbstractRewardDistribution
 // @dev An abstract contract that provides an internal function for reward calculation and inherits from the AdminContract.
-abstract contract AbstractRewardDistribution is AdminContract {
+abstract contract AbstractRewardDistribution is AdminContract, PoolTypes {
+    
+    /// @notice Internal function to calculate rewards based on staking amount, dayId, and poolId.
+    /// @dev This function is meant to be overridden in derived contracts.
+    /// @param amount The amount of tokens being staked.
+    /// @param poolType The type of the pool.
+    /// @return The calculated reward amount.
+    function _calculateRewards(
+        uint256 amount,
+        PoolType poolType
+    ) internal virtual returns (uint256);
 
-    function calculateRewards(uint256 amount, uint256 poolId) internal virtual returns (uint256);
 }

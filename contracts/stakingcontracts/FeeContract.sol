@@ -11,19 +11,8 @@ import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 contract FeeContract is AdminContract {
     uint256 private fee = 0.0009 ether;
     FeeTreasury public feeTreasury;
-    
-    /// @dev Event emitted when fees are deducted.
-    /// @param user The account that paid the fees.
-    /// @param feeAmount The fee amount.
-    event FeeDeducted(address indexed user, uint256 feeAmount);
-    
+
     event FeeUpdated(uint256 newFee);
-    
-    /// @dev Event emitted when fees are withdrawn.
-    event FeesWithdrawn(address indexed admin, uint256 amount);
-    
-    /// @dev Event emitted when stuck tokens are recovered.
-    event TokensRecovered(address indexed admin, address token, uint256 amount);
 
     constructor(address payable _feeTreasury) {
         feeTreasury = FeeTreasury(_feeTreasury);
