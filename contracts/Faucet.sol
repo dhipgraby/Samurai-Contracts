@@ -4,6 +4,8 @@ pragma solidity 0.8.19;
 import "./YenToken.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "./stakingcontracts/FeeContract.sol";
+import "./stakingcontracts/FeeTreasury.sol";
 
 /// @title Faucet for YenToken
 /// @notice This contract allows users to request tokens from a faucet with a cooldown period.
@@ -11,6 +13,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 contract Faucet is Ownable {
     /// @notice The YenToken contract.
     YenToken public yenToken;
+    FeeContract public feeContract;
 
     /// @notice Records the last time a user accessed the faucet.
     mapping(address => uint256) public lastAccessTime;
@@ -51,13 +54,17 @@ contract Faucet is Ownable {
 
     /// @notice Initializes the contract with the YenToken address.
     /// @param _yenToken The address of the YenToken contract.
-    constructor(address _yenToken) {
+    constructor(address _yenToken, address _feeContract, address _feeTreasury) {
         yenToken = YenToken(_yenToken);
+        feeContract = FeeContract(_feeContract);
+        feeTreasury = FeeTreasury(_feeTreasury);
         remainingTokens = yenToken.balanceOf(address(this));
     }
 
     /// @notice Request tokens from faucet.
-    function requestTokens() external canRequestTokens {
+    function requestTokens() external payable canRequestTokens {
+        uint256 feeAmount = feeContract.getFee();
+        require(msg.value == feeAmount, "incorrect fee!");
         uint256 _maxAmount = maxAmount;
         require(remainingTokens >= _maxAmount, "Not enough tokens in faucet");
 
@@ -66,6 +73,8 @@ contract Faucet is Ownable {
 
         totalClaimed += _maxAmount;
         remainingTokens -= _maxAmount;
+        (bool success, ) = feeTreasury.call{value: msg.value}("");
+        require(success, "Transfer failed.");
 
         emit TokensRequested(msg.sender, _maxAmount);
     }
