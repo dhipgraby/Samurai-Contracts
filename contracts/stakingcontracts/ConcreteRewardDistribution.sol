@@ -34,7 +34,8 @@ contract ConcreteRewardDistribution is AbstractRewardDistribution {
     /// @param AdminContract The new admin contract address.
     event AdminContractUpdated(address indexed AdminContract);
 
-    constructor() {
+    constructor(address adminContract) {
+        _adminContract = AdminContract(adminContract);
         rewardPercentages[PoolType.OneDay] = 5;
         rewardPercentages[PoolType.OneWeek] = 7;
         rewardPercentages[PoolType.OneMonth] = 10;

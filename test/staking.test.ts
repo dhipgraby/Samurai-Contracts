@@ -26,11 +26,11 @@ describe("Samurai Staking Platform", function () {
 
     // Fee treasury is deployed first.
     const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
-    const feeTreasury = await FeeTreasury.deploy();
+    const feeTreasury = await FeeTreasury.deploy(adminContract.target);
 
     // FeeContract takes the FeeTreasury as a parameter.
     const FeeContract = await ethers.getContractFactory("FeeContract");
-    const feeContract = await FeeContract.deploy(feeTreasury.target);
+    const feeContract = await FeeContract.deploy(feeTreasury.target, adminContract.target);
 
     // EscrowContract is deployed next.
     const Escrow = await ethers.getContractFactory("EscrowContract");
@@ -38,7 +38,7 @@ describe("Samurai Staking Platform", function () {
 
     // ConcreteRewardDistribution is deployed to manage the RewardDistribution.
     const ConcreteRewardDistribution = await ethers.getContractFactory("ConcreteRewardDistribution");
-    const rewardDistribution = await ConcreteRewardDistribution.deploy(escrow.target);
+    const rewardDistribution = await ConcreteRewardDistribution.deploy(adminContract.target);
 
     // StakingPlatform is the main contract.
     const StakingPlatform = await ethers.getContractFactory("SamuraiStakingPlatform");
@@ -52,7 +52,9 @@ describe("Samurai Staking Platform", function () {
 
     // OneDayStakingContract is a one-day staking pool.
     const OneDayStakingContract = await ethers.getContractFactory("OneDayStakingContract");
-    const oneDayStaking = await OneDayStakingContract.deploy(stakingPlatform.target);
+    const oneDayStaking = await OneDayStakingContract.deploy(stakingPlatform.target, feeContract.target);
+
+    await setupEscrow(admin, escrow, stakingPlatform, yen);
 
     return {
       admin,
@@ -99,11 +101,51 @@ describe("Samurai Staking Platform", function () {
     });
 
     it("Should setup the escrow contract", async function () {
-      const { yen, escrow, stakingPlatform, admin } = await loadFixture(deployStakingFixture);
-      await setupEscrow(admin, escrow, stakingPlatform, yen);
+      const { escrow } = await loadFixture(deployStakingFixture);
       const rewardBalance = await escrow.getRewardBalance();
       expect(rewardBalance).to.equal(initialRewardBalance);
     })
+    
+  });
+
+  describe("User Staking", function () {
+
+    it("Should allow a user to stake tokens", async function () {
+      const { user1, oneDayStaking, yen, stakingPlatform, escrow, feeContract } = await loadFixture(deployStakingFixture);
+    
+      // Mint some tokens for the user
+      const initialUserBalance = parseEther("1000");
+      await yen.mint(user1.address, initialUserBalance);
+    
+      // Approve the escrow contract to spend tokens
+      await yen.connect(user1).approve(escrow.target, initialUserBalance);
+    
+      // Get the fee amount from the FeeContract
+      const feeAmount = await feeContract.getFee();
+    
+      // Stake tokens using OneDayStakingContract
+      const amountToStake = parseEther("100");
+      await oneDayStaking.connect(user1).stake(amountToStake, { value: feeAmount });
+    
+      // Retrieve the stake information from SamuraiStakingPlatform
+      const stakeInfo = await stakingPlatform.userStakes(0); // Assuming 0 is the stakeId for this test
+    
+      // Validate the stake information
+      expect(stakeInfo.user).to.equal(user1.address);
+      expect(stakeInfo.amount).to.equal(amountToStake);
+      expect(stakeInfo.poolType).to.equal(0); // 0 is the poolType for one-day staking
+    });
+    
+    it("Should not allow a user to stake zero tokens", async function () {
+      const { user1, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
+      
+      // Get the fee amount from the FeeContract
+      const feeAmount = await feeContract.getFee();
+      
+      // Try to stake zero tokens
+      await expect(oneDayStaking.connect(user1).stake(0, { value: feeAmount })).to.be.revertedWith("Amount must be greater than zero");
+    });
+  
   });
 
 });

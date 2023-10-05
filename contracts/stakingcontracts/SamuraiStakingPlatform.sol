@@ -63,7 +63,7 @@ contract SamuraiStakingPlatform is PoolTypes {
         address _tokenAddress,
         address _feeContract,
         address _rewardDistribution,
-        address payable _escrowContract,
+        address _escrowContract,
         address payable _treasuryAddress
     ) {
         tokenAddress = IERC20(_tokenAddress);

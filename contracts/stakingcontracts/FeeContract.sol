@@ -33,8 +33,9 @@ contract FeeContract {
         _;
     }
 
-    constructor(address payable _feeTreasury, address ) {
+    constructor(address payable _feeTreasury, address adminContract) {
         feeTreasury = FeeTreasury(_feeTreasury);
+        _adminContract = AdminContract(adminContract);
     }
 
     /// @notice Get the current fee amount.
