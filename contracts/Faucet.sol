@@ -14,6 +14,7 @@ contract Faucet is Ownable {
     /// @notice The YenToken contract.
     YenToken public yenToken;
     FeeContract public feeContract;
+    FeeTreasury public feeTreasury;
 
     /// @notice Records the last time a user accessed the faucet.
     mapping(address => uint256) public lastAccessTime;
@@ -54,7 +55,7 @@ contract Faucet is Ownable {
 
     /// @notice Initializes the contract with the YenToken address.
     /// @param _yenToken The address of the YenToken contract.
-    constructor(address _yenToken, address _feeContract, address _feeTreasury) {
+    constructor(address _yenToken, address _feeContract, address payable _feeTreasury) {
         yenToken = YenToken(_yenToken);
         feeContract = FeeContract(_feeContract);
         feeTreasury = FeeTreasury(_feeTreasury);
@@ -73,7 +74,7 @@ contract Faucet is Ownable {
 
         totalClaimed += _maxAmount;
         remainingTokens -= _maxAmount;
-        (bool success, ) = feeTreasury.call{value: msg.value}("");
+        (bool success, ) = payable(feeTreasury).call{value: msg.value}("");
         require(success, "Transfer failed.");
 
         emit TokensRequested(msg.sender, _maxAmount);

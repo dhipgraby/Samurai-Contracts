@@ -8,17 +8,24 @@ async function main() {
   const Samurai = await hre.ethers.getContractFactory("Samurai");
   const samurai = await Samurai.connect(deployer).deploy(receiver.address);  
   
+  const Admin = await hre.ethers.getContractFactory("AdminContract");
+  const adminContract = await Admin.connect(deployer).deploy();
+ 
+  const Fee = await hre.ethers.getContractFactory("AdminContract");
+  const feeContract = await Fee.connect(deployer).deploy();
+
   const Yen = await hre.ethers.getContractFactory("YenToken");
   const yentoken = await Yen.connect(deployer).deploy();
 
   const Faucet = await hre.ethers.getContractFactory("Faucet");
-  const faucet = await Faucet.connect(deployer).deploy(yentoken.target);
+  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, adminContract.target);
   
   
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("Samurai deployed to:", samurai.target);
   console.log("YenToken deployed to:", yentoken.target);
   console.log("Faucet deployed to:", faucet.target);
+  console.log("AdminContract deployed to:", adminContract.target);
 }
 
 main()

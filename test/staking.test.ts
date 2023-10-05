@@ -145,6 +145,12 @@ describe("Samurai Staking Platform", function () {
       // Try to stake zero tokens
       await expect(oneDayStaking.connect(user1).stake(0, { value: feeAmount })).to.be.revertedWith("Amount must be greater than zero");
     });
+
+    it("Should store the correct user staked amount in the escrow", async function () {
+      const { user1, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
+
+      
+    })
   
   });
 
