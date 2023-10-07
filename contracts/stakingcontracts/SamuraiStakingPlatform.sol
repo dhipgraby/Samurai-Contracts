@@ -41,6 +41,7 @@ contract SamuraiStakingPlatform is PoolTypes {
         PoolType poolType; // The type of staking pool.
         uint256 endTimestamp; // The timestamp when the stake ends.
         uint256 reward; // The tokens earned as reward for staking.
+        bool isClaimed; 
     }
 
     /// @dev Mapping from stake ID to UserStake.
@@ -118,8 +119,8 @@ contract SamuraiStakingPlatform is PoolTypes {
         uint256 _feeAmount,
         uint256 _stakeId
     ) internal {
-        uint256 endTimestamp = block.timestamp + _duration;
-        uint256 reward = rewardDistribution.calculateRewards(
+        uint256 _endTimestamp = block.timestamp + _duration;
+        uint256 _reward = rewardDistribution.calculateRewards(
             _amount,
             _poolType
         );
@@ -129,8 +130,9 @@ contract SamuraiStakingPlatform is PoolTypes {
             user: _user,
             amount: _amount,
             poolType: _poolType,
-            endTimestamp: endTimestamp,
-            reward: reward
+            endTimestamp: _endTimestamp,
+            reward: _reward,
+            isClaimed: false
         });
 
         userStakes[_stakeId] = newUserStake;
@@ -142,8 +144,37 @@ contract SamuraiStakingPlatform is PoolTypes {
             _user,
             _stakeId,
             _amount,
+            _reward,
             address(tokenAddress)
         );
         emit Staked(_user, _amount, _poolType, _stakeId);
+    }
+
+    function claim(uint256 stakeId) external {
+        UserStake storage userStake = userStakes[stakeId];
+        require(userStake.endTimestamp <= block.timestamp, "Staking period not ended yet");
+        require(userStake.user == msg.sender, "Unauthorized");
+        require(!userStake.isClaimed, "Stake already claimed");
+    
+        uint256 amountToClaim = userStake.amount;
+        userStake.amount = 0;
+        userStake.reward = 0;
+        userStake.isClaimed = true;
+        escrowContract.userWithdraw(msg.sender, stakeId, amountToClaim, address(tokenAddress));
+    }
+    
+    function batchClaim(uint256[] calldata stakeIds) external {
+        for (uint256 i = 0; i < stakeIds.length; i++) {
+            UserStake storage userStake = userStakes[stakeIds[i]];
+            require(userStake.endTimestamp <= block.timestamp, "Staking period not ended yet for some stakes");
+            require(userStake.user == msg.sender, "Unauthorized for some stakes");
+            require(!userStake.isClaimed, "Stake already claimed");
+    
+            uint256 amountToClaim = userStake.amount;
+            userStake.amount = 0;
+            userStake.reward = 0;
+            userStake.isClaimed = true;
+            escrowContract.userWithdraw(msg.sender, stakeIds[i], amountToClaim, address(tokenAddress));
+        }
     }
 }

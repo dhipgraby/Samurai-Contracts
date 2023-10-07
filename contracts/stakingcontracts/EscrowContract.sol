@@ -13,12 +13,15 @@ contract EscrowContract {
     string private constant NOT_STAKINGPLATFORM_ERROR = "Caller is not the staking platform";
     string private constant TRANSFER_ERROR = "Transfer failed";
     string private constant BALANCE_ERROR = "Insufficient balance";
+    string private constant NO_FUNDS_TO_WITHDRAW = "No funds to withdraw";
 
     AdminContract private _adminContract;
     SamuraiStakingPlatform public _stakingPlatform;
 
     /// @notice Mapping of user stake balances.
     mapping(address => mapping(uint256 => uint256)) public userStakeBalances;
+    mapping(address => mapping(uint256 => uint256)) public userStakeRewards;
+
 
     /// @notice Total balance of the Reward amount.
     uint256 private totalRewardBalance;
@@ -79,32 +82,35 @@ contract EscrowContract {
         _adminContract = AdminContract(adminContract);
     }
 
-    /// @notice Public wrapper for the internal _getRewardBalance function.
+    /// @notice Returns the total reward balance.
+    /// @return The total reward balance.
     function getRewardBalance() external view returns (uint256) {
         return totalRewardBalance;
     }
 
-    /// @notice Public wrapper for the internal _userDeposit function.
+    /// @notice Deposits tokens on behalf of a user.
     /// @dev Can only be called by the staking platform.
     /// @param user The address of the user depositing tokens.
     /// @param stakeId The unique stake ID.
     /// @param amount The amount of tokens to be deposited.
-    /// @param token The ERC20 token contract address
+    /// @param reward The amount of tokens to be rewarded.
+    /// @param token The ERC20 token contract address.
     function userDeposit(
         address user,
         uint256 stakeId,
         uint256 amount,
+        uint256 reward,
         address token
     ) external onlyStakingPlatform {
-        _userDeposit(user, stakeId, amount, token);
+        _userDeposit(user, stakeId, amount, reward, token);
     }
 
-    /// @notice Public wrapper for the internal _userWithdraw function.
+    /// @notice Withdraws tokens on behalf of a user.
     /// @dev Can only be called by the staking platform.
     /// @param user The address of the user withdrawing tokens.
     /// @param stakeId The unique stake ID.
     /// @param amount The amount of tokens to be withdrawn.
-    /// @param token The ERC20 token contract address
+    /// @param token The ERC20 token contract address.
     function userWithdraw(
         address user,
         uint256 stakeId,
@@ -118,15 +124,18 @@ contract EscrowContract {
     /// @param user The address of the user depositing tokens.
     /// @param stakeId The unique stake ID.
     /// @param amount The amount of tokens to be deposited.
+    /// @param reward The amount of tokens to be rewarded.
     /// @param token The ERC20 token contract address
     function _userDeposit(
         address user,
         uint256 stakeId,
         uint256 amount,
+        uint256 reward,
         address token
     ) private {
         IERC20 erc20Token = IERC20(token);
         userStakeBalances[user][stakeId] += amount;
+        userStakeRewards[user][stakeId] += reward;
         require(
             erc20Token.transferFrom(user, address(this), amount),
             TRANSFER_ERROR
@@ -147,10 +156,11 @@ contract EscrowContract {
         address token
     ) private {
         require(userStakeBalances[user][stakeId] >= amount, BALANCE_ERROR);
-        userStakeBalances[user][stakeId] -= amount;
+        uint256 _reward = userStakeRewards[user][stakeId];
+        userStakeBalances[user][stakeId] = 0;
+        userStakeRewards[user][stakeId] = 0;
 
-        IERC20 erc20Token = IERC20(token);
-        require(erc20Token.transfer(user, amount), TRANSFER_ERROR);
+        require(IERC20(token).transfer(user, amount + _reward), TRANSFER_ERROR);
         emit UserWithdrawn(user, stakeId, amount);
     }
 
@@ -185,6 +195,26 @@ contract EscrowContract {
         totalRewardBalance += amount;
 
         emit RewardsDeposited(msg.sender, amount);
+    }
+
+    /// @notice Allows the admin to withdraw any Ether balance from the contract.
+    /// @dev Can only be called by an admin. The function will revert if there are no fees to withdraw.
+    function withdraw() external onlyAdmin {
+        uint256 balance = address(this).balance;
+        require(balance > 0, NO_FUNDS_TO_WITHDRAW);
+
+        (bool success, ) = payable(msg.sender).call{value: balance}("");
+        require(success, TRANSFER_ERROR);
+    }
+
+    /// @notice Function to safely recover any stuck ERC20 tokens.
+    /// @param token The address of the token to recover.
+    /// @param amount The amount of tokens to recover.
+    function recoverStuckTokens(
+        address token,
+        uint256 amount
+    ) external onlyAdmin {
+        IERC20(token).transfer(msg.sender, amount);
     }
 
 }

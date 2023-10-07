@@ -21,18 +21,6 @@ contract AdminContract is AccessControlEnumerable {
         address indexed account
     );
 
-    /// @dev Throws if called by any account other than admin.
-    modifier onlyAdmin() {
-        require(hasRole(ADMIN_ROLE, msg.sender), NOT_ADMIN_ERROR);
-        _;
-    }
-
-    /// @dev Throws if called by any account other than operator.
-    modifier onlyOperator() {
-        require(hasRole(OPERATOR_ROLE, msg.sender), NOT_OPERATOR_ERROR);
-        _;
-    }
-
     /// @notice Initializes the admin role to the address deploying the contract.
     constructor() {
         _setupRole(ADMIN_ROLE, msg.sender);
