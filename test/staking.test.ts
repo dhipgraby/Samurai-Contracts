@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { parseEther } from 'ethers';
-import { mine } from "@nomicfoundation/hardhat-network-helpers";
+import { stakingcontracts } from "../typechain-types/contracts";
 
 
 describe("Samurai Staking Platform", function () {
@@ -18,12 +18,7 @@ describe("Samurai Staking Platform", function () {
     await escrow.connect(admin).updateStakingPlatform(_stakingPlatform.target);
     await _yen.connect(admin).mint(admin.address, initialRewardBalance);
     await _yen.connect(admin).increaseAllowance(escrow.target, initialRewardBalance);
-    await escrow.connect(admin).depositRewards(initialRewardBalance, _yen.target);
-  }
-
-  const mineBlocks = async (blocks: number) => {
-    // instantly mine 1000 blocks
-    await mine(blocks);
+    await escrow.connect(admin).replenishRewards(initialRewardBalance, _yen.target);
   }
 
   const userStake = async (amount: string, user: any, yen: any, escrow: any, feeContract: any, oneDayStaking: any) => {
@@ -35,7 +30,7 @@ describe("Samurai Staking Platform", function () {
     await yen.connect(user).approve(escrow.target, initialUserBalance);
 
     // Get the fee amount from the FeeContract
-    const feeAmount = await feeContract.getFee();
+    const feeAmount = await feeContract.fetchCurrentFee();
 
     // Stake tokens using OneDayStakingContract
     const amountToStake = parseEther(amount);
@@ -49,27 +44,30 @@ describe("Samurai Staking Platform", function () {
     const AdminContract = await ethers.getContractFactory("AdminContract");
     const adminContract = await AdminContract.deploy();
 
-    const Contract = await ethers.getContractFactory("YenToken");
-    const yen = await Contract.deploy();
+    const Contract1 = await ethers.getContractFactory("YenToken");
+    const yen = await Contract1.deploy();
+
+    const Contract2 = await ethers.getContractFactory("YenToken");
+    const yen2 = await Contract2.deploy();
 
     // Fee treasury is deployed first.
     const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
     const feeTreasury = await FeeTreasury.deploy(adminContract.target);
 
     // FeeContract takes the FeeTreasury as a parameter.
-    const FeeContract = await ethers.getContractFactory("FeeContract");
-    const feeContract = await FeeContract.deploy(feeTreasury.target, adminContract.target);
+    const FeeContract = await ethers.getContractFactory("FeeManagement");
+    const feeContract = await FeeContract.deploy(adminContract.target);
 
     // EscrowContract is deployed next.
-    const Escrow = await ethers.getContractFactory("EscrowContract");
+    const Escrow = await ethers.getContractFactory("EscrowHandler");
     const escrow = await Escrow.deploy(adminContract.target);
 
     // ConcreteRewardDistribution is deployed to manage the RewardDistribution.
-    const ConcreteRewardDistribution = await ethers.getContractFactory("ConcreteRewardDistribution");
+    const ConcreteRewardDistribution = await ethers.getContractFactory("StakingRewardManager");
     const rewardDistribution = await ConcreteRewardDistribution.deploy(adminContract.target);
 
     // StakingPlatform is the main contract.
-    const StakingPlatform = await ethers.getContractFactory("SamuraiStakingPlatform");
+    const StakingPlatform = await ethers.getContractFactory("TokenStakingPlatform");
     const stakingPlatform = await StakingPlatform.deploy(
       yen.target,
       feeContract.target,
@@ -95,6 +93,7 @@ describe("Samurai Staking Platform", function () {
       escrow,
       feeContract,
       yen,
+      yen2,
       adminContract
     };
 
@@ -149,26 +148,26 @@ describe("Samurai Staking Platform", function () {
       await yen.connect(user1).approve(escrow.target, initialUserBalance);
 
       // Get the fee amount from the FeeContract
-      const feeAmount = await feeContract.getFee();
+      const feeAmount = await feeContract.fetchCurrentFee();
 
       // Stake tokens using OneDayStakingContract
       const amountToStake = parseEther("100");
       await oneDayStaking.connect(user1).stake(amountToStake, { value: feeAmount });
 
       // Retrieve the stake information from SamuraiStakingPlatform
-      const stakeInfo = await stakingPlatform.userStakes(0); // Assuming 0 is the stakeId for this test
+      const stakeInfo = await stakingPlatform.getStakeData(0); // Assuming 0 is the stakeId for this test
 
       // Validate the stake information
       expect(stakeInfo.user).to.equal(user1.address);
       expect(stakeInfo.amount).to.equal(amountToStake);
-      expect(stakeInfo.poolType).to.equal(0); // 0 is the poolType for one-day staking
+      expect(stakeInfo.pool).to.equal(0); // 0 is the poolType for one-day staking
     });
 
     it("Should not allow a user to stake zero tokens", async function () {
       const { user1, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
 
       // Get the fee amount from the FeeContract
-      const feeAmount = await feeContract.getFee();
+      const feeAmount = await feeContract.fetchCurrentFee();
 
       // Try to stake zero tokens
       await expect(oneDayStaking.connect(user1).stake(0, { value: feeAmount })).to.be.revertedWith("Amount must be greater than zero");
@@ -188,24 +187,26 @@ describe("Samurai Staking Platform", function () {
       const { user1, user2, oneDayStaking, feeContract, yen, escrow, stakingPlatform } = await loadFixture(deployStakingFixture);
       await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
       await userStake("2000", user2, yen, escrow, feeContract, oneDayStaking);
-      const stake1 = await stakingPlatform.userStakes(0);
-      const stake2 = await stakingPlatform.userStakes(1);
+      const stake1 = await stakingPlatform.getStakeData(0);
+      const stake2 = await stakingPlatform.getStakeData(1);
 
       let reward1 = (Number(stake1.amount) * 5 / 100);
       let reward2 = (Number(stake2.amount) * 5 / 100);
 
       // Validate the stake information
-      expect(stake1.stakeId).to.equal(0);
+      expect(stake1.id).to.equal(0);
       expect(stake1.user).to.equal(user1.address);
       expect(stake1.amount).to.equal(parseEther("1000"));
-      expect(stake1.poolType).to.equal(0); // 0 is the poolType for one-day staking
+      expect(stake1.pool).to.equal(0); // 0 is the poolType for one-day staking
       expect(Number(stake1.reward) / 1e18).to.equal(reward1 / 1e18);
+      expect(stake1.claimed).to.equal(false);
 
-      expect(stake2.stakeId).to.equal(1);
+      expect(stake2.id).to.equal(1);
       expect(stake2.user).to.equal(user2.address);
       expect(stake2.amount).to.equal(parseEther("2000"));
-      expect(stake2.poolType).to.equal(0); // 0 is the poolType for one-day staking
+      expect(stake2.pool).to.equal(0); // 0 is the poolType for one-day staking
       expect(Number(stake2.reward) / 1e18).to.equal(reward2 / 1e18);
+      expect(stake2.claimed).to.equal(false);
     });
 
   });
@@ -213,17 +214,9 @@ describe("Samurai Staking Platform", function () {
 
     it("Should correctly calculate the reward based on the staked amount", async function () {
       const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-
-      // User stakes 1000 YEN tokens
       await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-
-      // Retrieve the stake information from SamuraiStakingPlatform
-      const stakeInfo = await stakingPlatform.userStakes(0); // Assuming 0 is the stakeId for this test
-
-      // Calculate the expected reward
-      const expectedReward = Number(stakeInfo.amount) * 5 / 100; // Assuming a 5% reward rate
-
-      // Validate the calculated reward
+      const stakeInfo = await stakingPlatform.getStakeData(0);
+      const expectedReward = Number(stakeInfo.amount) * 5 / 100;
       expect(Number(stakeInfo.reward)).to.equal(expectedReward);
     });
 
@@ -231,45 +224,27 @@ describe("Samurai Staking Platform", function () {
 
   describe("User Claiming", function () {
 
-    it("Should allow a user to claim a stake", async function () {
+    it("Should allow a user to claimStakeAndReward a stake", async function () {
       const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-
-      // User stakes 1000 YEN tokens
       await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-
-      // Mine some blocks to simulate time passing
       await advanceTime(86400);
-
-      // User claims the stake
-      await stakingPlatform.connect(user1).claim(0); // Assuming 0 is the stakeId for this test
-
-      // Retrieve the stake information from SamuraiStakingPlatform
-      const stakeInfo = await stakingPlatform.userStakes(0);
-
-      // Validate that the stake is claimed
-      expect(stakeInfo.isClaimed).to.equal(true);
+      const feeAmount = await feeContract.fetchCurrentFee();
+      await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
+      const stakeInfo = await stakingPlatform.getStakeData(0);
+      expect(stakeInfo.claimed).to.equal(true);
     });
 
-    it("Should allow a user to batch claim multiple stakes", async function () {
+    it("Should allow a user to batch claimStakeAndReward multiple stakes", async function () {
       const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-
-      // User stakes 1000 YEN tokens twice
       await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
       await userStake("2000", user1, yen, escrow, feeContract, oneDayStaking);
-
-      // Mine some blocks to simulate time passing
       await advanceTime(86400);
-
-      // User batch claims the stakes
-      await stakingPlatform.connect(user1).batchClaim([0, 1]); // Assuming 0 and 1 are the stakeIds for this test
-
-      // Retrieve the stake information from SamuraiStakingPlatform
-      const stakeInfo1 = await stakingPlatform.userStakes(0);
-      const stakeInfo2 = await stakingPlatform.userStakes(1);
-
-      // Validate that the stakes are claimed
-      expect(stakeInfo1.isClaimed).to.equal(true);
-      expect(stakeInfo2.isClaimed).to.equal(true);
+      const feeAmount = await feeContract.fetchCurrentFee();
+      await stakingPlatform.connect(user1).batchClaimStakesAndRewards([0, 1], { value: feeAmount + feeAmount }); // Assuming 0 and 1 are the stakeIds for this test
+      const stakeInfo1 = await stakingPlatform.getStakeData(0);
+      const stakeInfo2 = await stakingPlatform.getStakeData(1);
+      expect(stakeInfo1.claimed).to.equal(true);
+      expect(stakeInfo2.claimed).to.equal(true);
     });
 
   });
@@ -279,10 +254,10 @@ describe("Samurai Staking Platform", function () {
       await expect(escrow.connect(user1).updateAdminContract(adminContract.target)).to.be.revertedWith("Caller is not an admin");
     });
 
-    it("Should only allow admin to deposit rewards", async function () {
+    it("Should only allow admin to replenish rewards", async function () {
       const { user1, escrow, yen } = await loadFixture(deployStakingFixture);
       const amount = parseEther("1000");
-      await expect(escrow.connect(user1).depositRewards(amount, yen.target)).to.be.revertedWith("Caller is not an admin");
+      await expect(escrow.connect(user1).replenishRewards(amount, yen.target)).to.be.revertedWith("Caller is not an admin");
     });
   });
 
@@ -290,14 +265,14 @@ describe("Samurai Staking Platform", function () {
     it("Should revert if unauthorized user tries to withdraw", async function () {
       const { user1, user2, escrow, yen, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
       await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-      await expect(escrow.connect(user2).userWithdraw(user1.address, 0, parseEther("100"), yen.target)).to.be.revertedWith("Caller is not the staking platform");
+      await expect(escrow.connect(user2).handleUserWithdraw(user1.address, 0, parseEther("100"), yen.target)).to.be.revertedWith('Caller is not the staking platform');
     });
   });
 
   describe("Event Emission", function () {
     it("Should emit UserDeposited event when a user deposits", async function () {
       const { user1, escrow, yen, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
-      await expect(userStake("1000", user1, yen, escrow, feeContract, oneDayStaking))
+      expect(await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking))
         .to.emit(escrow, 'UserDeposited')
         .withArgs(user1.address, 0, parseEther("1000"));
     });
@@ -306,7 +281,8 @@ describe("Samurai Staking Platform", function () {
       const { user1, escrow, yen, oneDayStaking, feeContract, stakingPlatform } = await loadFixture(deployStakingFixture);
       await userStake("1050", user1, yen, escrow, feeContract, oneDayStaking);
       await advanceTime(86400);
-      await expect(stakingPlatform.connect(user1).claim(0))
+      const feeAmount = await feeContract.fetchCurrentFee();
+      expect(await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount }))
         .to.emit(escrow, 'UserWithdrawn')
         .withArgs(user1.address, 0, parseEther("1050"));
     });
@@ -314,58 +290,190 @@ describe("Samurai Staking Platform", function () {
 
   describe("Claim and Reward Transfers", function () {
 
-    it("Should transfer the staked amount back to the user upon claiming", async function () {
+    it("Should transfer the staked amount back to the user upon claimStakeAndRewarding", async function () {
       const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-
-      // Initial user balance
       const initialBalance = await yen.balanceOf(user1.address);
-
-      // User stakes 1550 YEN tokens
       await userStake("1550", user1, yen, escrow, feeContract, oneDayStaking);
-      
-      // Retrieve the stake information to get the reward amount
-      const stakeInfo = await stakingPlatform.userStakes(0);
+      const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
-
-      // Advance time to make the stake claimable
       await advanceTime(86400);
-
-      // User claims the stake
-      await stakingPlatform.connect(user1).claim(0);
-      
-      // Final user balance
+      const feeAmount = await feeContract.fetchCurrentFee();
+      await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
       const finalBalance = await yen.balanceOf(user1.address);
-
-      // Validate that the staked amount is transferred back
       expect(finalBalance - initialBalance).to.equal(parseEther("1550") + (rewardAmount));
     });
 
-    it("Should transfer the correct reward amount to the user upon claiming", async function () {
+    it("Should transfer the correct reward amount to the user upon claimStakeAndRewarding", async function () {
       const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-
-      // Initial user balance
       const initialBalance = await yen.balanceOf(user1.address);
-
-      // User stakes 1000 YEN tokens
       await userStake("2400", user1, yen, escrow, feeContract, oneDayStaking);
-
-      // Retrieve the stake information to get the reward amount
-      const stakeInfo = await stakingPlatform.userStakes(0);
+      const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
 
-      // Advance time to make the stake claimable
       await advanceTime(86400);
 
-      // User claims the stake
-      await stakingPlatform.connect(user1).claim(0);
+      const feeAmount = await feeContract.fetchCurrentFee();
 
-      // Final user balance
+      await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
+
       const finalBalance = await yen.balanceOf(user1.address);
 
-      // Validate that the reward amount is transferred
       expect(finalBalance - initialBalance).to.equal(parseEther("2400") + (rewardAmount));
     });
 
+  });
+
+  describe("Fee Treasury - withdrawFees", function () {
+    it("should allow admin to withdraw fees", async function () {
+      const { admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await admin.sendTransaction({ to: feeTreasury.target, value: parseEther("1") });
+      await feeTreasury.connect(admin).withdrawAccumulatedFees();
+      expect(await ethers.provider.getBalance(feeTreasury.target)).to.equal(0);
+    });
+
+    it("should emit FeesWithdrawn event", async function () {
+      const { admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await admin.sendTransaction({ to: feeTreasury.target, value: parseEther("1") });
+      expect(await feeTreasury.connect(admin).withdrawAccumulatedFees())
+        .to.emit(feeTreasury, "FeesWithdrawn")
+        .withArgs(admin.address, parseEther("1"));
+    });
+
+    it("should revert if not admin tries to withdraw", async function () {
+      const { user1, feeTreasury } = await loadFixture(deployStakingFixture);
+      await expect(feeTreasury.connect(user1).withdrawAccumulatedFees()).to.be.revertedWith("Caller is not an admin");
+    });
+
+    it("should revert if no fees to withdraw", async function () {
+      const { admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await expect(feeTreasury.connect(admin).withdrawAccumulatedFees()).to.be.revertedWith("No fees to withdraw");
+    });
+  });
+
+  describe("Fee Treasury - recoverStuckTokens", function () {
+    it("should allow admin to recover stuck tokens", async function () {
+      const { yen, admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await yen.transfer(feeTreasury.target, 100);
+      await feeTreasury.connect(admin).recoverStuckERC20Tokens(yen.target);
+      expect(await yen.balanceOf(feeTreasury.target)).to.equal(0);
+    });
+
+    it("should emit TokensRecovered event", async function () {
+      const { yen, admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await yen.transfer(feeTreasury.target, 100);
+      expect(await feeTreasury.connect(admin).recoverStuckERC20Tokens(yen.target))
+        .to.emit(feeTreasury, "TokensRecovered")
+        .withArgs(admin.address, yen.target, 100);
+    });
+
+    it("should revert if not admin tries to recover tokens", async function () {
+      const { yen, user1, feeTreasury } = await loadFixture(deployStakingFixture);
+      await expect(feeTreasury.connect(user1).recoverStuckERC20Tokens(yen.target)).to.be.revertedWith("Caller is not an admin");
+    });
+  });
+
+  describe("EscrowHandler - recoverStuckTokens", function () {
+    it("should allow admin to recover stuck tokens", async function () {
+      const { yen, admin, escrow } = await loadFixture(deployStakingFixture);
+      await yen.transfer(escrow.target, 100);
+      await escrow.connect(admin).recoverStuckERC20Tokens(yen.target);
+      expect(await yen.balanceOf(escrow.target)).to.equal(0);
+    });
+
+    it("should emit TokensRecovered event", async function () {
+      const { yen, admin, escrow } = await loadFixture(deployStakingFixture);
+      await yen.transfer(escrow.target, 100);
+      expect(await escrow.connect(admin).recoverStuckERC20Tokens(yen.target))
+        .to.emit(escrow, "TokensRecovered")
+        .withArgs(admin.address, yen.target, 100);
+    });
+
+    it("should revert if not admin tries to recover tokens", async function () {
+      const { yen, user1, escrow } = await loadFixture(deployStakingFixture);
+      await expect(escrow.connect(user1).recoverStuckERC20Tokens(yen.target)).to.be.revertedWith("Caller is not an admin");
+    });
+  });
+
+  describe("EscrowHandler - withdrawFees", function () {
+    it("should allow admin to withdraw fees", async function () {
+      const { admin, escrow } = await loadFixture(deployStakingFixture);
+      await admin.sendTransaction({ to: escrow.target, value: parseEther("1") });
+      await escrow.connect(admin).withdraw();
+      expect(await ethers.provider.getBalance(escrow.target)).to.equal(0);
+    });
+    it("should revert if not admin tries to withdraw", async function () {
+      const { user1, escrow } = await loadFixture(deployStakingFixture);
+      await expect(escrow.connect(user1).withdraw()).to.be.revertedWith("Caller is not an admin");
+    });
+
+    it("should revert if no fees to withdraw", async function () {
+      const { admin, escrow } = await loadFixture(deployStakingFixture);
+      await expect(escrow.connect(admin).withdraw()).to.be.revertedWith("No funds to withdraw");
+    });
+  });
+
+  describe("FeeManagement - update", function () {
+    const newFeeAmount = parseEther('0.001');
+    it("should allow admin to update fees", async function () {
+      const { admin, feeContract } = await loadFixture(deployStakingFixture);
+      await feeContract.connect(admin).updateFeeAmount(newFeeAmount);
+      expect(await feeContract.connect(admin).fetchCurrentFee()).to.equal(newFeeAmount);
+    });
+    it("should allow admin to update adminContract", async function () {
+      const { admin, feeContract } = await loadFixture(deployStakingFixture);
+      await feeContract.connect(admin).updateAdminAccessControl(admin.address);
+      expect(await feeContract._adminContract()).to.be.equal(admin.address);
+    });
+    it("should allow admin to update escrow adminContract", async function () {
+      const { admin, escrow } = await loadFixture(deployStakingFixture);
+      await escrow.connect(admin).updateAdminContract(admin.address);
+      expect(await escrow._adminContract()).to.be.equal(admin.address);
+    });
+    it("should allow admin to update adminContract", async function () {
+      const { admin, oneDayStaking } = await loadFixture(deployStakingFixture);
+      await oneDayStaking.connect(admin).updateAdminContract(admin.address);
+      expect(await oneDayStaking.adminContract()).to.be.equal(admin.address);
+    });
+    it("should allow admin to update staking platform", async function () {
+      const { admin, oneDayStaking } = await loadFixture(deployStakingFixture);
+      const [ newStakingPlatform ] = await ethers.getSigners();
+      await oneDayStaking.connect(admin).updateStakingPlatform(newStakingPlatform.address);
+      expect(await oneDayStaking.stakingPlatform()).to.be.equal(newStakingPlatform.address);
+    });
+    it("should allow admin to update adminContract", async function () {
+      const { admin, feeTreasury } = await loadFixture(deployStakingFixture);
+      await feeTreasury.connect(admin).updateAdminAccessControl(admin.address);
+      expect(await feeTreasury._adminContract()).to.be.equal(admin.address);
+    });
+    it("should revert if not admin update adminContract", async function () {
+      const { admin, user1, feeContract } = await loadFixture(deployStakingFixture);
+      await expect(feeContract.connect(user1).updateAdminAccessControl(admin.address)).to.be.revertedWith("Caller is not an operator");
+    });
+  });
+
+  describe("StakingRewardManager - update reward rate ", function () {
+ 
+    it("should allow operator to set reward rate", async function () {
+      const { admin, rewardDistribution } = await loadFixture(deployStakingFixture);
+      await rewardDistribution.connect(admin).setRewardRate(0, 10); // Assuming 0 corresponds to PoolType.OneDay
+      expect(await rewardDistribution.poolRewardRates(0)).to.equal(10);
+    });
+    it("should allow operator to set reward rate", async function () {
+      const { admin, rewardDistribution } = await loadFixture(deployStakingFixture);
+      await rewardDistribution.connect(admin).setAdminContract(admin.address); // Assuming 0 corresponds to PoolType.OneDay
+      expect(await rewardDistribution._adminContract()).to.be.equal(admin.address);
+    });
+    it("should emit RewardRateUpdated event", async function () {
+      const { admin, rewardDistribution } = await loadFixture(deployStakingFixture);
+      expect(await rewardDistribution.connect(admin).setRewardRate(0, 10))
+        .to.emit(rewardDistribution, "RewardRateUpdated")
+        .withArgs(0, 10);
+    });
+
+    it("should revert if non-operator tries to set reward rate", async function () {
+      const { user1, rewardDistribution } = await loadFixture(deployStakingFixture);
+      await expect(rewardDistribution.connect(user1).setRewardRate(0, 10)).to.be.revertedWith("Caller is not an operator");
+    });
   });
 
 });

@@ -7,6 +7,9 @@ contract PoolTypes {
         OneWeek,
         OneMonth,
         SixMonths,
-        OneYear
+        OneYear,
+        Custom,
+        Special0,
+        Special1
     }
 }

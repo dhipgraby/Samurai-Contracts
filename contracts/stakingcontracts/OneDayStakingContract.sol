@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-import "./SamuraiStakingPlatform.sol";
+import "./TokenStakingPlatform.sol";
 import "./AdminContract.sol";
-import "./FeeContract.sol";
+import "./FeeManagement.sol";
 
 /// @title One Day Staking Contract
 /// @notice This contract allows users to stake tokens for a one-day duration.
@@ -14,13 +14,13 @@ contract OneDayStakingContract {
     string private constant INCORRECT_AMOUNT = "Amount must be greater than zero";
 
     /// @notice The SamuraiStakingPlatform contract for staking operations.
-    SamuraiStakingPlatform public stakingPlatform;
+    TokenStakingPlatform public stakingPlatform;
 
     /// @notice The AdminContract for role-based access control.
-    AdminContract private adminContract;
+    AdminContract public adminContract;
 
     /// @notice The FeeContract for calculating the staking fee.
-    FeeContract public feeContract;
+    FeeManagement public feeContract;
 
     /// @notice Event emitted when the staking platform is updated.
     event StakingPlatformUpdated(address stakingPlatform);
@@ -47,15 +47,15 @@ contract OneDayStakingContract {
         address _feeContract
     ) {
         adminContract = AdminContract(_adminContract);
-        stakingPlatform = SamuraiStakingPlatform(_stakingPlatform);
-        feeContract = FeeContract(_feeContract);
+        stakingPlatform = TokenStakingPlatform(_stakingPlatform);
+        feeContract = FeeManagement(_feeContract);
     }
 
     /// @notice Allows a user to stake tokens for one day.
     /// @dev The function requires the correct fee amount to be sent along with the transaction.
     /// @param amount The amount of tokens to stake.
     function stake(uint256 amount) external payable {
-        uint256 _feeAmount = feeContract.getFee();
+        uint256 _feeAmount = feeContract.fetchCurrentFee();
         require(msg.value == _feeAmount, INCORRECT_FEE_AMOUNT);
         require(amount > 0, INCORRECT_AMOUNT);
 
@@ -64,7 +64,7 @@ contract OneDayStakingContract {
         uint256 duration = 1 days;
 
         // Call the stakeTokens function in the StakingPlatform
-        stakingPlatform.stakeTokens{value: msg.value}(
+        stakingPlatform.initiateStake{value: msg.value}(
             msg.sender,
             amount,
             poolType,
@@ -76,7 +76,7 @@ contract OneDayStakingContract {
     /// @dev Can only be called by an admin.
     /// @param newStakingPlatform The new SamuraiStakingPlatform contract address.
     function updateStakingPlatform(address newStakingPlatform) external onlyAdmin {
-        stakingPlatform = SamuraiStakingPlatform(newStakingPlatform);
+        stakingPlatform = TokenStakingPlatform(newStakingPlatform);
         emit StakingPlatformUpdated(newStakingPlatform);
     }
 
