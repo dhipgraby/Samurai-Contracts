@@ -8,7 +8,7 @@ import "./FeeManagement.sol";
 /// @title One Month Staking Contract
 /// @notice This contract allows users to stake tokens for a one-month duration.
 /// @dev It interacts with the SamuraiStakingPlatform, AdminContract, and FeeContract for staking and fee calculations.
-contract OneWeekStakingContract {
+contract OneMonthStakingContract {
     string private constant NOT_ADMIN_ERROR = "Caller is not an admin";
     string private constant INCORRECT_FEE_AMOUNT = "Incorrect fee sent";
     string private constant INCORRECT_AMOUNT = "Amount must be greater than zero";

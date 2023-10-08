@@ -2,7 +2,6 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { parseEther } from 'ethers';
-import { stakingcontracts } from "../typechain-types/contracts";
 
 
 describe("Samurai Staking Platform", function () {
@@ -21,7 +20,7 @@ describe("Samurai Staking Platform", function () {
     await escrow.connect(admin).replenishRewards(initialRewardBalance, _yen.target);
   }
 
-  const userStake = async (amount: string, user: any, yen: any, escrow: any, feeContract: any, oneDayStaking: any) => {
+  const userStake = async (amount: string, user: any, yen: any, escrow: any, feeContract: any, staking: any) => {
     // Mint some tokens for the user
     const initialUserBalance = parseEther(amount);
     await yen.mint(user.address, initialUserBalance);
@@ -34,7 +33,7 @@ describe("Samurai Staking Platform", function () {
 
     // Stake tokens using OneDayStakingContract
     const amountToStake = parseEther(amount);
-    const tx = await oneDayStaking.connect(user).stake(amountToStake, { value: feeAmount });
+    const tx = await staking.connect(user).stake(amountToStake, { value: feeAmount });
     return tx;
   };
 
@@ -79,7 +78,24 @@ describe("Samurai Staking Platform", function () {
     // OneDayStakingContract is a one-day staking pool.
     const OneDayStakingContract = await ethers.getContractFactory("OneDayStakingContract");
     const oneDayStaking = await OneDayStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-
+    
+    // OneWeekStakingContract is a one-week staking pool.
+    const OneWeekStakingContract = await ethers.getContractFactory("OneWeekStakingContract");
+    const oneWeekStaking = await OneWeekStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+    
+    // OneMonthStakingContract is a one-month staking pool.
+    const OneMonthStakingContract = await ethers.getContractFactory("OneMonthStakingContract");
+    const oneMonthStaking = await OneMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+    
+    // OneYearStakingContract is a one-year staking pool.
+    const OneYearStakingContract = await ethers.getContractFactory("OneYearStakingContract");
+    const oneYearStaking = await OneYearStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+    
+    // SixMonthStakingContract is a six-month staking pool.
+    const SixMonthStakingContract = await ethers.getContractFactory("SixMonthStakingContract");
+    const sixMonthStaking = await SixMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+    
+   
     await setupEscrow(admin, escrow, stakingPlatform, yen);
 
     return {
@@ -94,7 +110,11 @@ describe("Samurai Staking Platform", function () {
       feeContract,
       yen,
       yen2,
-      adminContract
+      adminContract,
+      oneWeekStaking,
+      oneMonthStaking,
+      oneYearStaking,
+      sixMonthStaking,
     };
 
   };
@@ -112,7 +132,11 @@ describe("Samurai Staking Platform", function () {
         escrow,
         feeContract,
         yen,
-        adminContract } = await loadFixture(deployStakingFixture);
+        adminContract,
+        oneWeekStaking,
+        oneMonthStaking,
+        oneYearStaking,
+        sixMonthStaking } = await loadFixture(deployStakingFixture);
 
       expect(stakingPlatform.target).to.be.a('string');
       expect(escrow.target).to.be.a('string');
@@ -125,6 +149,11 @@ describe("Samurai Staking Platform", function () {
       expect(admin.address).to.be.a('string');
       expect(user1.address).to.be.a('string');
       expect(user2.address).to.be.a('string');
+      expect(oneDayStaking.target).to.be.a('string');
+      expect(oneWeekStaking.target).to.be.a('string');
+      expect(oneMonthStaking.target).to.be.a('string');
+      expect(oneYearStaking.target).to.be.a('string');
+      expect(sixMonthStaking.target).to.be.a('string');
     });
 
     it("Should setup the escrow contract", async function () {
@@ -474,6 +503,22 @@ describe("Samurai Staking Platform", function () {
       const { user1, rewardDistribution } = await loadFixture(deployStakingFixture);
       await expect(rewardDistribution.connect(user1).setRewardRate(0, 10)).to.be.revertedWith("Caller is not an operator");
     });
+  });
+  describe("Multiple Staking pools - user staking ", function () {
+ 
+    it("should allow user to stake in multiple pools", async function () {
+      const { user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const _amount = "2000";
+      const _amount1 = "1000";
+      const _amount2 = "500";
+
+      await userStake(_amount, user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(_amount1, user1, yen, escrow, feeContract, oneWeekStaking);
+      await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
+
+      //expect(await stakingPlatform.getUserStakeIds(user1.address)).to.be.equal(["0", "1", "2"]);
+    });
+    
   });
 
 });
