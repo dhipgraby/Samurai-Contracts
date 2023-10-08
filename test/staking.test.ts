@@ -49,23 +49,24 @@ describe("Samurai Staking Platform", function () {
     const Contract2 = await ethers.getContractFactory("YenToken");
     const yen2 = await Contract2.deploy();
 
-    // Fee treasury is deployed first.
+    
+    // FeeManagement takes the FeeTreasury as a parameter.
+    const FeeContract = await ethers.getContractFactory("FeeManagement");
+    const feeContract = await FeeContract.deploy(adminContract.target);
+    
+    // Fee treasury is deployed.
     const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
     const feeTreasury = await FeeTreasury.deploy(adminContract.target);
 
-    // FeeContract takes the FeeTreasury as a parameter.
-    const FeeContract = await ethers.getContractFactory("FeeManagement");
-    const feeContract = await FeeContract.deploy(adminContract.target);
-
-    // EscrowContract is deployed next.
+    // EscrowHandler is deployed.
     const Escrow = await ethers.getContractFactory("EscrowHandler");
     const escrow = await Escrow.deploy(adminContract.target);
 
-    // ConcreteRewardDistribution is deployed to manage the RewardDistribution.
+    // StakingRewardManager is deployed to manage the RewardDistribution.
     const ConcreteRewardDistribution = await ethers.getContractFactory("StakingRewardManager");
     const rewardDistribution = await ConcreteRewardDistribution.deploy(adminContract.target);
 
-    // StakingPlatform is the main contract.
+    // TokenStakingPlatform is the main contract.
     const StakingPlatform = await ethers.getContractFactory("TokenStakingPlatform");
     const stakingPlatform = await StakingPlatform.deploy(
       yen.target,

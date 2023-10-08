@@ -1,10 +1,12 @@
 const hre = require("hardhat");
+const parseEther =  require('ethers');
 
 async function main() {
-  const [deployer, receiver, feeTreasury] = await hre.ethers.getSigners();
+  const [deployer, receiver ] = await hre.ethers.getSigners();
 
   console.log("Royalty Receiver account:", receiver.address);
   
+  console.log('contracts are deployed in this order: ')
   const Samurai = await hre.ethers.getContractFactory("Samurai");
   const samurai = await Samurai.connect(deployer).deploy(receiver.address);  
   
@@ -17,15 +19,82 @@ async function main() {
   const Yen = await hre.ethers.getContractFactory("YenToken");
   const yentoken = await Yen.connect(deployer).deploy();
 
+  // Fee treasury is deployed.
+  const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
+  const feeTreasury = await FeeTreasury.deploy(adminContract.target);
+
   const Faucet = await hre.ethers.getContractFactory("Faucet");
-  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, feeTreasury.address);
+  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, feeTreasury.target);  
+
+  // EscrowHandler is deployed.
+  const Escrow = await ethers.getContractFactory("EscrowHandler");
+  const escrow = await Escrow.deploy(adminContract.target);
+
+  // StakingRewardManager is deployed to manage the RewardDistribution.
+  const StakingRewardManager = await ethers.getContractFactory("StakingRewardManager");
+  const rewardDistribution = await StakingRewardManager.deploy(adminContract.target);
+
+  // TokenStakingPlatform is the main contract.
+  const StakingPlatform = await ethers.getContractFactory("TokenStakingPlatform");
+  const stakingPlatform = await StakingPlatform.deploy(
+    yentoken.target,
+    feeContract.target,
+    rewardDistribution.target,
+    escrow.target,
+    feeTreasury.target
+  );
+
+  // OneDayStakingContract is a one-day staking pool.
+  const OneDayStakingContract = await ethers.getContractFactory("OneDayStakingContract");
+  const oneDayStaking = await OneDayStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+  
+  // OneWeekStakingContract is a one-week staking pool.
+  const OneWeekStakingContract = await ethers.getContractFactory("OneWeekStakingContract");
+  const oneWeekStaking = await OneWeekStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+  
+  // OneMonthStakingContract is a one-month staking pool.
+  const OneMonthStakingContract = await ethers.getContractFactory("OneMonthStakingContract");
+  const oneMonthStaking = await OneMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+  
+  // OneYearStakingContract is a one-year staking pool.
+  const OneYearStakingContract = await ethers.getContractFactory("OneYearStakingContract");
+  const oneYearStaking = await OneYearStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
+  
+  // SixMonthStakingContract is a six-month staking pool.
+  const SixMonthStakingContract = await ethers.getContractFactory("SixMonthStakingContract");
+  const sixMonthStaking = await SixMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
   
   
   console.log("Deploying contracts with the account:", deployer.address);
-  console.log("Samurai deployed to:", samurai.target);
-  console.log("YenToken deployed to:", yentoken.target);
-  console.log("Faucet deployed to:", faucet.target);
-  console.log("FeeTreasury address:", feeTreasury.address);
+  console.log("1. Samurai deployed to:", samurai.target);
+  console.log("1. AdminContract deployed to:", adminContract.target);
+  console.log("2. YenToken deployed to:", yentoken.target);
+  console.log("3. FeeTreasury address:", feeTreasury.target);
+  console.log("4. Faucet deployed to:", faucet.target);
+  console.log("5. escrow address:", escrow.target);
+  console.log("6. rewardDistribution address:", rewardDistribution.target,);
+  console.log("7. stakingPlatform address:", stakingPlatform.target,);
+  console.log("8. oneDayStaking address:", oneDayStaking.target,);
+  console.log("9. oneWeekStaking address:", oneWeekStaking.target,);
+  console.log("10. oneMonthStaking address:", oneMonthStaking.target,);
+  console.log("11. oneYearStaking address:", oneYearStaking.target,);
+  console.log("12. sixMonthStaking address:", sixMonthStaking.target,);
+
+  async function setupEscrow() {
+    const initialRewardBalance = hre.ethers.parseEther('1000000000');
+    await escrow.connect(deployer).updateStakingPlatform(stakingPlatform.target);
+    await yentoken.connect(deployer).mint(deployer.address, initialRewardBalance);
+    await yentoken.connect(deployer).increaseAllowance(escrow.target, initialRewardBalance);
+    await escrow.connect(deployer).replenishRewards(initialRewardBalance, yentoken.target);
+    return true;
+  }
+
+  const result = await setupEscrow();
+  if (result) {
+    console.log('Escrow setup successfully, pools are ready to stake!');
+  }
+
+  
 }
 
 main()
