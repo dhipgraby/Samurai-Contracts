@@ -518,6 +518,18 @@ describe("Samurai Staking Platform", function () {
 
       //expect(await stakingPlatform.getUserStakeIds(user1.address)).to.be.equal(["0", "1", "2"]);
     });
+    it("should allow users to stake in multiple pools at the same time", async function () {
+      const { user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const _amount = "2000";
+      const _amount1 = "1000";
+      const _amount2 = "500";
+
+      await userStake(_amount, user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(_amount1, user2, yen, escrow, feeContract, oneWeekStaking);
+      await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
+
+      //expect(await stakingPlatform.getUserStakeIds(user1.address)).to.be.equal(["0", "1", "2"]);
+    });
     
   });
 
