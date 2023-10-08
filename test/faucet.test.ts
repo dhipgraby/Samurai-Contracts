@@ -3,14 +3,21 @@ import { ethers } from "hardhat";
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { parseEther } from "ethers";
 
+
 describe("Faucet Contract", function () {
 
   async function deployFaucetFixture() {
     const [admin, user1, user2] = await ethers.getSigners();
+    const AdminContract = await ethers.getContractFactory("AdminContract");
+    const adminContract = await AdminContract.deploy();
     const YenToken = await ethers.getContractFactory("YenToken");
     const yenToken = await YenToken.deploy();
+    const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
+    const feeTreasury = await FeeTreasury.deploy(adminContract.target);
+    const FeeContract = await ethers.getContractFactory("FeeManagement");
+    const feeContract = await FeeContract.deploy(adminContract.target);
     const Faucet = await ethers.getContractFactory("Faucet");
-    const faucet = await Faucet.deploy(yenToken.target);
+    const faucet = await Faucet.deploy(yenToken.target, feeContract.target, feeTreasury.target);
 
     return { faucet, yenToken, admin, user1, user2 };
   }
@@ -25,20 +32,20 @@ describe("Faucet Contract", function () {
   });
 
   describe("Token Request", function () {
-
+    const feeAmount = parseEther("0.0009");
     it("should allow user to request tokens after cooldown", async function () {
       const { faucet, admin, user1, yenToken } = await loadFixture(deployFaucetFixture);
       await yenToken.connect(admin).approve(faucet.target, parseEther("200000"));
-      await faucet.connect(admin).depositTokens(parseEther("200000")); // 
+      await faucet.connect(admin).replenishFaucet(parseEther("200000"));
 
-      await faucet.connect(user1).requestTokens();
+      await faucet.connect(user1).requestTokens({ value: feeAmount });
       expect(await yenToken.balanceOf(user1.address)).to.equal(parseEther("1000"));
     });
 
     it("should not allow user to request tokens if faucet has insufficient balance", async function () {
       const { faucet, user1 } = await loadFixture(deployFaucetFixture);
 
-      await expect(faucet.connect(user1).requestTokens()).to.be.revertedWith("Not enough tokens in faucet");
+      await expect(faucet.connect(user1).requestTokens({ value: feeAmount })).to.be.revertedWith("Not enough tokens in faucet");
     });
 
   });
@@ -50,7 +57,7 @@ describe("Faucet Contract", function () {
       await yenToken.transfer(admin.address, parseEther("200000")); // Mint some tokens to admin for testing
 
       await yenToken.connect(admin).approve(faucet.target, parseEther("10000"));
-      await faucet.connect(admin).depositTokens(parseEther("10000"));
+      await faucet.connect(admin).replenishFaucet(parseEther("10000"));
 
       expect(await yenToken.balanceOf(faucet.target)).to.equal(parseEther("10000"));
     });
@@ -59,7 +66,7 @@ describe("Faucet Contract", function () {
       const { faucet, admin, yenToken } = await loadFixture(deployFaucetFixture);
       await yenToken.transfer(faucet.target, parseEther("10000")); // Admin deposits 1000 YenTokens to faucet
 
-      await faucet.connect(admin).withdrawStuckTokens(yenToken.target, admin.address);
+      await faucet.connect(admin).recoverStuckTokens(yenToken.target, admin.address);
       expect(await yenToken.balanceOf(admin.address)).to.equal(parseEther("1000000"));
     });
 
@@ -71,7 +78,7 @@ describe("Faucet Contract", function () {
         value: parseEther("1")
       });
 
-      await faucet.connect(admin).withdrawStuckEther(admin.address);
+      await faucet.connect(admin).recoverStuckEther(admin.address);
       expect(await ethers.provider.getBalance(faucet.target)).to.equal(0);
     });
 
