@@ -105,9 +105,9 @@ contract Samurai is
     /// @param tokenId The ID of the token to mint
     /// @dev requries ERC20 token approval to be given to this contract
     function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) {
-        IERC20 token = IERC20(erc20TokenAddress);
+        require(tokenId != 666 ,"Only ETH");
         require(
-            token.transferFrom(msg.sender, address(this), initialTokenPrice),
+            IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), initialTokenPrice),
             "Token transfer failed"
         );
         _mintToken(msg.sender, tokenId);
