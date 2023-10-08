@@ -1,14 +1,12 @@
-# Staking Platform
+# Samurai Staking Platform
 
 ## Table of Contents
 
-- [Staking Platform](#staking-platform)
+- [Samurai Staking Platform](#samurai-staking-platform)
   - [Table of Contents](#table-of-contents)
   - [Introduction](#introduction)
   - [Features](#features)
-  - [Modules](#modules)
-    - [Core Contracts](#core-contracts)
-    - [Additional Contracts](#additional-contracts)
+  - [Core Contracts](#core-contracts)
   - [Data Structures](#data-structures)
   - [Core Functions](#core-functions)
   - [Getting Started](#getting-started)
@@ -22,52 +20,37 @@
 
 ## Introduction
 
-The Staking Platform is a decentralized application that allows users to stake tokens and earn rewards. It is designed to be secure, flexible, and efficient, with features like dynamic reward adjustment, daily reward caps, and variable interest rates based on staking duration.
+The Staking Platform is a decentralized application built on Ethereum, designed for secure and efficient token staking and reward distribution. It leverages modular smart contracts for various functionalities like fee management, reward calculation, and escrow services.
 
 ## Features
 
-- **Reusable Staking Pools**: Pools can be reused for multiple staking rounds.
-- **Escrow Mechanism**: Securely holds rewards and user funds.
-- **Staking Durations**: Offers one-day, one-week, one-month, six-month, and one-year staking options.
-- **Roles and Permissions**: Admin and Operator roles with specific permissions.
-- **Fees**: Dynamic fee structure for staking and claiming rewards, including deposit and withdrawal fees.
-- **Reward Logic**: Dynamic reward adjustment with a fixed daily cap.
-- **Resettable Pools**: Pools can be reset by the admin.
-- **Stoppable Function**: Allows the admin to pause and resume the contract.
-- **Reload Staking Rewards**: Admin can reload the staking rewards.
+- **Modular Architecture**: Separation of concerns through multiple contracts.
+- **Dynamic Fee Structure**: Fee calculations are managed by a separate contract.
+- **Role-Based Access Control**: Admin roles for contract management.
+- **Batch Operations**: Allows users to claim multiple stakes and rewards in a single transaction.
+- **Escrow Services**: Secure handling of user deposits and withdrawals.
+- **Event Logging**: Detailed event logs for important contract interactions.
 
-## Modules
+## Core Contracts
 
-### Core Contracts
-
-1. **Admin Contract**: Manages roles and permissions.
-2. **Escrow Contract**: Holds and distributes rewards and user funds.
-3. **One-Day Staking Contract**: Manages one-day staking.
-4. **One-Week Staking Contract**: Manages one-week staking.
-5. **One-Month Staking Contract**: Manages one-month staking.
-6. **Six-Month Staking Contract**: Manages six-month staking.
-7. **One-Year Staking Contract**: Manages one-year staking.
-
-### Additional Contracts
-
-1. **Fee Contract**: manages the fee calculations  for the stakingpools
-2. **Reward Distribution Contract**: Handles reward distribution logic.
+1. **TokenStakingPlatform**: Main contract for staking and reward distribution.
+2. **FeeManagement**: Manages dynamic fee calculations.
+3. **StakingRewardManager**: Handles reward distribution logic.
+4. **AdminContract**: Manages roles and permissions.
+5. **EscrowHandler**: Securely handles user deposits and withdrawals.
 
 ## Data Structures
 
-- `UserStake`: Holds user-specific staking information, including staking duration and interest rate.
-- `DayStake`: Holds daily staking information, including a mapping of user addresses to their respective `UserStake` structs.
+- `StakeInfo`: Holds individual stake data, including user, amount, pool type, and more.
+- `PoolType`: Enum for different types of staking pools.
 
 ## Core Functions
 
-- `stake(uint256 amount, uint256 dayId, uint256 duration)`: For staking tokens.
-- `claimReward(uint256 dayId)`: For claiming rewards.
-- `updateRewardRate()`: For dynamic reward rate adjustment.
-- `calculateReward(uint256 stakedAmount, uint256 duration)`: For calculating rewards.
-- `resetPool()`: For resetting the staking pool.
-- `pause()`: For pausing the contract.
-- `unpause()`: For resuming the contract.
-- `reloadRewards(uint256 amount)`: For reloading staking rewards.
+- `initiateStake()`: Initiates a new stake.
+- `claimStakeAndReward()`: Allows users to claim their stake and rewards.
+- `batchClaimStakesAndRewards()`: Allows batch claiming of stakes and rewards.
+- `getStakeData()`: Fetches stake data based on stake ID.
+- `getUserStakeIds()`: Fetches all stake IDs for a user.
 
 ## Getting Started
 
@@ -104,7 +87,6 @@ The Staking Platform is a decentralized application that allows users to stake t
 
 - **Solidity**: Smart Contracts
 - **Hardhat**: Development Environment
-- **Chainlink**: Oracle Services for fee management
 - **OpenZeppelin**: Reusable Smart Contract Libraries
 
 ## Testing

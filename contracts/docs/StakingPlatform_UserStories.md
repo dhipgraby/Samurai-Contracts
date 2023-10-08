@@ -10,77 +10,69 @@
 
 ## General Users
 
-### 1. Staking Tokens
+### 1. Initiating Stakes
 
-- **User Story**: As a user, I want to stake my tokens so that I can earn rewards over time.
+- **User Story**: As a user, I want to initiate a stake so that I can earn rewards over time.
 - **Acceptance Criteria**:
-  - The user can select the amount of tokens to stake.
-  - The user can choose the staking duration (one-week or one-month).
-  - The user receives a confirmation upon successful staking. (off-chain)
+  - The user can specify the amount of tokens to stake.
+  - The user can select from different pool types for staking.
+  - The user receives a unique stake ID upon successful staking.
 
-### 2. Claiming Rewards
+### 2. Claiming Stakes and Rewards
 
-- **User Story**: As a user, I want to claim my stake and earned rewards so that I can enjoy the benefits of staking.
+- **User Story**: As a user, I want to claim my stakes and rewards after the staking period has ended.
 - **Acceptance Criteria**:
-  - The user can view their pending rewards.
-  - The user can claim rewards after the staking period has ended.
+  - The user can view their pending rewards based on stake IDs.
+  - The user can initiate the claim process after the staking period has ended.
 
-### 3. Viewing Staking History
+### 3. Batch Claiming
 
-- **User Story**: As a user, I want to view my staking history so that I can keep track of my investments.
+- **User Story**: As a user, I want to claim multiple stakes and rewards in a single transaction.
 - **Acceptance Criteria**:
-  - The user can view a list of all their past and current stakes.
-  - The list includes the amount staked, duration, and rewards earned.
+  - The user can select multiple stake IDs for batch claiming.
+  - The user is charged a fee proportional to the number of stakes being claimed.
 
-### 4. Transparent Fees
+### 4. Fee Transparency
 
-- **User Story**: As a user, I want to be charged a fair fee that adjusts according to the announcement.
+- **User Story**: As a user, I want to know the fee involved in staking and claiming.
 - **Acceptance Criteria**:
-  - The user is informed of the fee before confirming the transaction.
-  - Fee changes are announced in advance
-
-### 5. Terminate Staking Round
-
-- **User Story**: As a user, I want to claim my tokens after the unstaking timestamp have passed so that the staking round can be terminated and rewards can be distributed.
-- **Acceptance Criteria**:
-  - The user can view the `unstakingTimestamp` for each staking round they have participated in.
-  - The user can initiate the unstaking process only after the `unstakingTimestamp` has passed.
+  - The user is informed of the fee before confirming any transaction.
+  - Any changes to the fee structure are communicated in advance.
 
 ---
 
 ## Admin Users
 
-### 1. Withdraw Funds
+### 1. Fee Management
 
-- **User Story**: As an admin, I want to withdraw the fees from the fee treasury
+- **User Story**: As an admin, I want to manage the fee structure for staking and claiming.
 - **Acceptance Criteria**:
-  - The admin can execute functions to withdraw the fee amount
+  - The admin can update the fee structure through the `FeeManagement` contract.
 
-### 2. Adjust Reward Rates
+### 2. Update Contracts
 
-- **User Story**: As an admin, I want to adjust the reward percentage.
+- **User Story**: As an admin, I want to update core contracts like `TokenContract`, `FeeManagement`, and `Treasury`.
 - **Acceptance Criteria**:
-  - The admin can update the reward automatically applied to future stakes.
+  - The admin can update contract addresses for better platform management.
 
-### 3. Role Management
+### 3. Role-Based Access
 
-- **User Story**: As an admin, I want to assign operators roles and permissions for better platform management.
+- **User Story**: As an admin, I want to manage roles and permissions.
 - **Acceptance Criteria**:
-  - The admin can assign and revoke `OPERATOR_ROLE` permissions.
+  - The admin can assign and revoke roles through the `AdminContract`.
 
 ---
 
 ## Operators
 
-### 1. Monitor Staking Pools
+### 1. Monitoring
 
-- **User Story**: As an operator, I want to monitor staking pools' health and status to ensure they operate correctly.
+- **User Story**: As an operator, I want to monitor the health and status of the staking platform.
 - **Acceptance Criteria**:
-  - The operator has access to real-time analytics and status reports of staking pools.
+  - The operator has access to analytics and status reports.
 
+### 2. Emergency Actions
 
-### 2. Emergency Shutdown
-
-- **User Story**: As an operator, I want to have the ability to perform an emergency shutdown of a staking pool in case of any security threats.
+- **User Story**: As an operator, I want to have the ability to perform emergency actions in case of security threats.
 - **Acceptance Criteria**:
-  - The operator can initiate an emergency shutdown, freezing all staking and reward activities.
+  - The operator can initiate emergency actions, such as pausing the contract, under admin approval.

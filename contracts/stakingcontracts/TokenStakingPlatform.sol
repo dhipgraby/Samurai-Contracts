@@ -56,6 +56,9 @@ contract TokenStakingPlatform is PoolTypes {
     /// @dev Mapping from stake ID to StakeInfo.
     mapping(uint256 => StakeInfo) private stakeData;
 
+    /// @dev Mapping from user address to array of stake IDs.
+    mapping(address => uint256[]) public userStakeIds;
+
     /// @notice Event emitted when a user stakes tokens.
     event TokenStaked(
         address indexed user,
@@ -136,6 +139,8 @@ contract TokenStakingPlatform is PoolTypes {
         });
 
         stakeData[stakeId] = newStake;
+        // Add the new stake ID to the user's array of stake IDs.
+        userStakeIds[user].push(stakeId);
 
         (bool success, ) = payable(treasury).call{value: fee}("");
         require(success, TREASURY_TRANSFER_FAIL);
@@ -195,6 +200,13 @@ contract TokenStakingPlatform is PoolTypes {
     /// @param stakeId the stakeId to query.
     function getStakeData(uint256 stakeId) external view returns (StakeInfo memory) {
         return stakeData[stakeId];
+    }
+
+    /// @notice Function to fetch all stake IDs for a user.
+    /// @param user The user's address.
+    /// @return An array of stake IDs.
+    function getUserStakeIds(address user) external view returns (uint256[] memory) {
+        return userStakeIds[user];
     }
 
     /// @notice Updates the token contract address.
