@@ -35,6 +35,7 @@
   },
   "dependencies": {
     "@chainlink/contracts": "^0.7.1",
+    "@nomiclabs/hardhat-ethers": "^2.2.3",
     "@openzeppelin/contracts": "^4.9.3"
   }
 }

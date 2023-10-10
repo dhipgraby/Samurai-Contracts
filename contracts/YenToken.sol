@@ -5,7 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract YenToken is ERC20, Ownable {
-    uint256 public constant MAX_SUPPLY = 6000000000 * (10 ** 18); // 1,000,000,000 tokens with 18 decimals
+    uint256 public constant MAX_SUPPLY = 6000000000 * (10 ** 18); // 6,000,000,000 tokens with 18 decimals
 
     constructor() ERC20("Yen", "YEN") {
         uint256 initialAmount = 1000000 ether;
