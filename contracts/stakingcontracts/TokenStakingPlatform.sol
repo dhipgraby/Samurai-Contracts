@@ -59,6 +59,10 @@ contract TokenStakingPlatform is PoolTypes {
     /// @dev Mapping from user address to array of stake IDs.
     mapping(address => uint256[]) public userStakeIds;
 
+    // Nested mapping to store stake IDs for each user in each pool
+    mapping(address => mapping(uint256 => uint256[])) public userStakesInPools;
+
+
     /// @notice Event emitted when a user stakes tokens.
     event TokenStaked(
         address indexed user,
@@ -112,6 +116,9 @@ contract TokenStakingPlatform is PoolTypes {
 
         PoolType pool = PoolType(poolType);
         uint256 newStakeId = stakeIdCounter++;
+
+         // Add the new stake ID to the user's array of stake IDs in the specific pool
+         userStakesInPools[user][poolType].push(newStakeId);
 
         _executeStake(user, amount, pool, duration, fee, newStakeId);
     }
@@ -207,6 +214,14 @@ contract TokenStakingPlatform is PoolTypes {
     /// @return An array of stake IDs.
     function getUserStakeIds(address user) external view returns (uint256[] memory) {
         return userStakeIds[user];
+    }
+
+    /// @notice Function to fetch all stake IDs for a user in a specific pool
+    /// @param user The user's address.
+    /// @param poolType The pool type.
+    /// @return An array of stake IDs.
+    function getUserStakeIdsInPool(address user, uint256 poolType) external view returns (uint256[] memory) {
+        return userStakesInPools[user][poolType];
     }
 
     /// @notice Updates the token contract address.

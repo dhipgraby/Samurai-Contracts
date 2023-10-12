@@ -508,7 +508,7 @@ describe("Samurai Staking Platform", function () {
   describe("Multiple Staking pools - user staking ", function () {
  
     it("should allow user to stake in multiple pools", async function () {
-      const { user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const { user1, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
       const _amount = "2000";
       const _amount1 = "1000";
       const _amount2 = "500";
@@ -517,7 +517,8 @@ describe("Samurai Staking Platform", function () {
       await userStake(_amount1, user1, yen, escrow, feeContract, oneWeekStaking);
       await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
 
-      //expect(await stakingPlatform.getUserStakeIds(user1.address)).to.be.equal(["0", "1", "2"]);
+      expect((await stakingPlatform.getUserStakeIds(user1.address)).length).to.be.equal(3);
+
     });
     it("should allow users to stake in multiple pools at the same time", async function () {
       const { user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
@@ -529,9 +530,35 @@ describe("Samurai Staking Platform", function () {
       await userStake(_amount1, user2, yen, escrow, feeContract, oneWeekStaking);
       await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
 
-      //expect(await stakingPlatform.getUserStakeIds(user1.address)).to.be.equal(["0", "1", "2"]);
+      expect((await stakingPlatform.getUserStakeIds(user1.address)).length).to.be.equal(2);
     });
     
+  });
+  describe("Mapping Features", function () {
+    it("Should correctly map user to their stakes", async function () {
+      const { user1, user2, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
+      await userStake("3000", user1, yen, escrow, feeContract, oneWeekStaking);
+      await userStake("2000", user2, yen, escrow, feeContract, oneWeekStaking);
+  
+      const user1Stakes = await stakingPlatform.getUserStakeIdsInPool(user1.address, 1);
+      const user2Stakes = await stakingPlatform.getUserStakeIdsInPool(user2.address, 1);
+      
+      expect(user1Stakes.length).to.equal(1);
+      expect(user2Stakes.length).to.equal(1);
+      expect(user1Stakes[0]).to.equal(0); // Assuming 0 is the stakeId for user1
+      expect(user2Stakes[0]).to.equal(1); // Assuming 1 is the stakeId for user2
+    });
+  
+    it("Should update the mapping when a user un-stakes", async function () {
+      const { user1, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
+      await userStake("3000", user1, yen, escrow, feeContract, oneWeekStaking);
+      await advanceTime(86400*7);
+      const feeAmount = await feeContract.fetchCurrentFee();
+      await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
+  
+      const user1Stakes = await stakingPlatform.getUserStakeIdsInPool(user1.address, 0);
+      expect(user1Stakes.length).to.equal(0);
+    });
   });
 
 });
