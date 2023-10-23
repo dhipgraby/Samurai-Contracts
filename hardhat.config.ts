@@ -25,7 +25,7 @@ const config: HardhatUserConfig = {
     coinmarketcap: '82c3ceca-d368-4e32-9296-e0ee96c95272',
     gasPriceApi: 'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
     currency: 'EUR',
-    gasPrice: 6,
+    gasPrice: 15,
     enabled: true,
   },
   networks: {

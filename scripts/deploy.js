@@ -1,18 +1,18 @@
 const hre = require("hardhat");
-const parseEther =  require('ethers');
+const parseEther = require('ethers');
 
 async function main() {
-  const [deployer, user1, user2, user3, receiver ] = await hre.ethers.getSigners();
+  const [deployer, user1, user2, user3, receiver] = await hre.ethers.getSigners();
 
   console.log("Royalty Receiver account:", receiver.address);
-  
+
   console.log('contracts are deployed in this order: ')
   const Samurai = await hre.ethers.getContractFactory("Samurai");
-  const samurai = await Samurai.connect(deployer).deploy(receiver.address);  
-  
+  const samurai = await Samurai.connect(deployer).deploy(receiver.address);
+
   const Admin = await hre.ethers.getContractFactory("AdminContract");
   const adminContract = await Admin.connect(deployer).deploy();
- 
+
   const Fee = await hre.ethers.getContractFactory("FeeManagement");
   const feeContract = await Fee.connect(deployer).deploy(adminContract.target);
 
@@ -24,7 +24,7 @@ async function main() {
   const feeTreasury = await FeeTreasury.deploy(adminContract.target);
 
   const Faucet = await hre.ethers.getContractFactory("Faucet");
-  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, feeTreasury.target);  
+  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, feeTreasury.target);
 
   // EscrowHandler is deployed.
   const Escrow = await ethers.getContractFactory("EscrowHandler");
@@ -47,24 +47,24 @@ async function main() {
   // OneDayStakingContract is a one-day staking pool.
   const OneDayStakingContract = await ethers.getContractFactory("OneDayStakingContract");
   const oneDayStaking = await OneDayStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-  
+
   // OneWeekStakingContract is a one-week staking pool.
   const OneWeekStakingContract = await ethers.getContractFactory("OneWeekStakingContract");
   const oneWeekStaking = await OneWeekStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-  
+
   // OneMonthStakingContract is a one-month staking pool.
   const OneMonthStakingContract = await ethers.getContractFactory("OneMonthStakingContract");
   const oneMonthStaking = await OneMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-  
+
   // OneYearStakingContract is a one-year staking pool.
   const OneYearStakingContract = await ethers.getContractFactory("OneYearStakingContract");
   const oneYearStaking = await OneYearStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-  
+
   // SixMonthStakingContract is a six-month staking pool.
   const SixMonthStakingContract = await ethers.getContractFactory("SixMonthStakingContract");
   const sixMonthStaking = await SixMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
-  
-  
+
+
   console.log("Deploying contracts with the account:", deployer.address);
   console.log("1. Samurai deployed to:", samurai.target);
   console.log("1. AdminContract deployed to:", adminContract.target);
@@ -84,7 +84,7 @@ async function main() {
     const initialRewardBalance = hre.ethers.parseEther('1000000000');
     const initialFaucetBalance = hre.ethers.parseEther('1000000000');
     await escrow.connect(deployer).updateStakingPlatform(stakingPlatform.target);
-    await yentoken.connect(deployer).mint(deployer.address, (initialRewardBalance+ initialFaucetBalance));
+    await yentoken.connect(deployer).mint(deployer.address, (initialRewardBalance + initialFaucetBalance));
 
     await yentoken.connect(deployer).increaseAllowance(faucet.target, initialFaucetBalance);
     await faucet.connect(deployer).replenishFaucet(initialFaucetBalance);
@@ -104,25 +104,33 @@ async function main() {
     await yentoken.connect(user1).increaseAllowance(escrow.target, initialTestStakeAmount2);
     await yentoken.connect(user2).increaseAllowance(escrow.target, initialTestStakeAmount2);
     await yentoken.connect(user3).increaseAllowance(escrow.target, initialTestStakeAmount2);
-    
-    await oneDayStaking.connect(user1).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneDayStaking.connect(user2).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneDayStaking.connect(user3).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
+
+    await oneDayStaking.connect(user1).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneDayStaking.connect(user2).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneDayStaking.connect(user3).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
     console.log("one day staking done")
 
-    await oneWeekStaking.connect(user1).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneWeekStaking.connect(user2).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneWeekStaking.connect(user3).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
+    await oneWeekStaking.connect(user1).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneWeekStaking.connect(user2).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneWeekStaking.connect(user3).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
     console.log("one week staking done")
 
-    await oneMonthStaking.connect(user1).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneMonthStaking.connect(user2).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
-    await oneMonthStaking.connect(user3).stake(initialTestStakeAmount1, {value: hre.ethers.parseEther("0.0009")});
+    await oneMonthStaking.connect(user1).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneMonthStaking.connect(user2).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
+    await oneMonthStaking.connect(user3).stake(initialTestStakeAmount1, { value: hre.ethers.parseEther("0.0009") });
     console.log("one month staking done")
     return true
   }
 
+  async function setupYenTokenToSamurai() {
+    await samurai.connect(deployer).setERC20TokenAddress(yentoken.target);
+    return true;
+  }
 
+  const yenOverSamurai = await setupYenTokenToSamurai();
+  if (yenOverSamurai) {
+    console.log('Yen token added to NFT Samurai contract!');
+  }
 
   const faucetAndEscrow = await setupFaucetAndEscrow();
   if (faucetAndEscrow) {
