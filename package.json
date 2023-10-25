@@ -10,7 +10,7 @@
     "build": "npx hardhat build",
     "test": "npx hardhat test",
     "deploy-local": "npx hardhat run ./scripts/deploy.js --network localhost",
-    "deploy-goerli": "npx hardhat run ./scripts/deploy.js --network goerli",
+    "deploy-goerli": "npx hardhat run ./scripts/deploy_goerli.ts --network goerli",
     "coverage": "npx hardhat coverage --network hardhat --testfiles 'test/*.ts'"
   },
   "devDependencies": {

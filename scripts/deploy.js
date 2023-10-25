@@ -63,7 +63,8 @@ async function main() {
   const SixMonthStakingContract = await ethers.getContractFactory("SixMonthStakingContract");
   const sixMonthStaking = await SixMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
 
-
+  
+  console.log("feeContract.target:", feeContract.target);
   console.log("Deploying contracts with the account:", deployer);
   console.log("1. Samurai deployed to:", samurai.target);
   console.log("1. AdminContract deployed to:", adminContract.target);
