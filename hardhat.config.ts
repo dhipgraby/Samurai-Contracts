@@ -38,12 +38,12 @@ const config: HardhatUserConfig = {
       gasPrice: 1000000000,
     },
     // for testnet
-    'base-goerli': {
-      url: 'https://goerli.base.org',
+    goerli: {
+      url: process.env.ALCHEMY_APIKEY_GOERLI as string,
+      chainId: 5,
       accounts: {
         mnemonic: `${process.env.WALLET_KEY}`,
       },
-      gasPrice: 1000000,
     },
     // for local dev environment
     'base-local': {

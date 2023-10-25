@@ -2,13 +2,14 @@ const hre = require("hardhat");
 const parseEther = require('ethers');
 
 async function main() {
-  const [ deployer ] = await hre.ethers.getSigners();
-
+  const deployer = await hre.ethers.getSigner();
+  console.log(deployer);
+  return
   //console.log("Royalty Receiver account:", receiver.address);
 
   console.log('contracts are deployed in this order: ')
-/*   const Samurai = await hre.ethers.getContractFactory("Samurai");
-  const samurai = await Samurai.connect(deployer).deploy(deployer.address); */
+  const Samurai = await hre.ethers.getContractFactory("Samurai");
+  const samurai = await Samurai.connect(deployer).deploy(deployer.address);
 
   const Admin = await hre.ethers.getContractFactory("AdminContract");
   const adminContract = await Admin.connect(deployer).deploy();
