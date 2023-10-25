@@ -2,13 +2,13 @@ const hre = require("hardhat");
 const parseEther = require('ethers');
 
 async function main() {
-  const [deployer, user1, user2, user3, receiver] = await hre.ethers.getSigners();
+  const [ deployer ] = await hre.ethers.getSigners();
 
-  console.log("Royalty Receiver account:", receiver.address);
+  //console.log("Royalty Receiver account:", receiver.address);
 
   console.log('contracts are deployed in this order: ')
-  const Samurai = await hre.ethers.getContractFactory("Samurai");
-  const samurai = await Samurai.connect(deployer).deploy(receiver.address);
+/*   const Samurai = await hre.ethers.getContractFactory("Samurai");
+  const samurai = await Samurai.connect(deployer).deploy(deployer.address); */
 
   const Admin = await hre.ethers.getContractFactory("AdminContract");
   const adminContract = await Admin.connect(deployer).deploy();
@@ -80,7 +80,7 @@ async function main() {
   console.log("11. oneYearStaking address:", oneYearStaking.target,);
   console.log("12. sixMonthStaking address:", sixMonthStaking.target,);
 
-  async function setupFaucetAndEscrow() {
+ /*  async function setupFaucetAndEscrow() {
     const initialRewardBalance = hre.ethers.parseEther('1000000000');
     const initialFaucetBalance = hre.ethers.parseEther('1000000000');
     await escrow.connect(deployer).updateStakingPlatform(stakingPlatform.target);
@@ -147,7 +147,8 @@ async function main() {
     console.log('user3:', user3.address);
   }
   console.log('Samurai Staking Platform is deployed successfully');
-}
+  */
+} 
 
 main()
   .then(() => process.exit(0))

@@ -3,7 +3,7 @@ import "@nomicfoundation/hardhat-toolbox";
 import "hardhat-gas-reporter";
 import 'solidity-coverage';
 import 'hardhat-docgen';
-
+require('dotenv').config();
 
 /** @type import('hardhat/config').HardhatUserConfig */
 const config: HardhatUserConfig = {
@@ -29,10 +29,32 @@ const config: HardhatUserConfig = {
     enabled: true,
   },
   networks: {
-    hardhat: {
-      
+    // for mainnet
+    'base-mainnet': {
+      url: 'https://mainnet.base.org',
+      accounts: {
+        mnemonic: `${process.env.WALLET_KEY}`,
+      },
+      gasPrice: 1000000000,
+    },
+    // for testnet
+    'base-goerli': {
+      url: 'https://goerli.base.org',
+      accounts: {
+        mnemonic: `${process.env.WALLET_KEY}`,
+      },
+      gasPrice: 1000000,
+    },
+    // for local dev environment
+    'base-local': {
+      url: 'http://localhost:8545',
+      accounts: {
+        mnemonic: `${process.env.WALLET_KEY}`,
+      },
+      gasPrice: 10,
     },
   },
+  defaultNetwork: 'hardhat',
 };
 
 

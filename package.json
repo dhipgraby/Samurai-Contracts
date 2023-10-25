@@ -10,6 +10,7 @@
     "build": "npx hardhat build",
     "test": "npx hardhat test",
     "deploy-local": "npx hardhat run ./scripts/deploy.js --network localhost",
+    "deploy-base": "npx hardhat run ./scripts/deploy.js --network base-goerli",
     "coverage": "npx hardhat coverage --network hardhat --testfiles 'test/*.ts'"
   },
   "devDependencies": {
@@ -36,6 +37,7 @@
   "dependencies": {
     "@chainlink/contracts": "^0.7.1",
     "@nomiclabs/hardhat-ethers": "^2.2.3",
-    "@openzeppelin/contracts": "^4.9.3"
+    "@openzeppelin/contracts": "^4.9.3",
+    "dotenv": "^16.3.1"
   }
 }

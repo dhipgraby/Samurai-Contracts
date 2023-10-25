@@ -22,7 +22,7 @@ contract Faucet is Ownable {
     address payable public feeTreasury;
 
     mapping(address => uint256) public lastAccessTime;
-    uint256 public cooldownTime = 1 days;
+    uint256 public cooldownTime = 300 seconds; // 1 days;
     uint256 public maxAmount = 1000 * 10 ** 18;
     uint256 public totalClaimed = 0;
     uint256 public remainingTokens;
