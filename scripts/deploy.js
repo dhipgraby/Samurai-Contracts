@@ -1,31 +1,29 @@
 const hre = require("hardhat");
 const parseEther = require('ethers');
 
+
+const deployer = "0x21Cca084378f8a6F48117A85F25CCfCb040AEffe";
 async function main() {
-  const deployer = await hre.ethers.getSigner();
-  console.log(deployer);
-  return
-  //console.log("Royalty Receiver account:", receiver.address);
 
   console.log('contracts are deployed in this order: ')
   const Samurai = await hre.ethers.getContractFactory("Samurai");
-  const samurai = await Samurai.connect(deployer).deploy(deployer.address);
+  const samurai = await Samurai.deploy(deployer);
 
-  const Admin = await hre.ethers.getContractFactory("AdminContract");
-  const adminContract = await Admin.connect(deployer).deploy();
+  const Admin = await ethers.getContractFactory("AdminContract");
+  const adminContract = await Admin.deploy();
 
-  const Fee = await hre.ethers.getContractFactory("FeeManagement");
-  const feeContract = await Fee.connect(deployer).deploy(adminContract.target);
+  const Fee = await ethers.getContractFactory("FeeManagement");
+  const feeContract = await Fee.deploy(adminContract.target);
 
-  const Yen = await hre.ethers.getContractFactory("YenToken");
-  const yentoken = await Yen.connect(deployer).deploy();
+  const Yen = await ethers.getContractFactory("YenToken");
+  const yentoken = await Yen.deploy();
 
   // Fee treasury is deployed.
   const FeeTreasury = await ethers.getContractFactory("FeeTreasury");
   const feeTreasury = await FeeTreasury.deploy(adminContract.target);
 
-  const Faucet = await hre.ethers.getContractFactory("Faucet");
-  const faucet = await Faucet.connect(deployer).deploy(yentoken.target, feeContract.target, feeTreasury.target);
+  const Faucet = await ethers.getContractFactory("Faucet");
+  const faucet = await Faucet.deploy(yentoken.target, feeContract.target, feeTreasury.getAddress());
 
   // EscrowHandler is deployed.
   const Escrow = await ethers.getContractFactory("EscrowHandler");
@@ -66,7 +64,7 @@ async function main() {
   const sixMonthStaking = await SixMonthStakingContract.deploy(adminContract.target, stakingPlatform.target, feeContract.target);
 
 
-  console.log("Deploying contracts with the account:", deployer.address);
+  console.log("Deploying contracts with the account:", deployer);
   console.log("1. Samurai deployed to:", samurai.target);
   console.log("1. AdminContract deployed to:", adminContract.target);
   console.log("2. YenToken deployed to:", yentoken.target);

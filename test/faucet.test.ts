@@ -67,7 +67,7 @@ describe("Faucet Contract", function () {
       await yenToken.transfer(faucet.target, parseEther("10000")); // Admin deposits 1000 YenTokens to faucet
 
       await faucet.connect(admin).recoverStuckTokens(yenToken.target, admin.address);
-      expect(await yenToken.balanceOf(admin.address)).to.equal(parseEther("1000000"));
+      expect(await yenToken.balanceOf(faucet.target)).to.equal(parseEther("0"));
     });
 
     it("should allow admin to withdraw stuck Ether", async function () {

@@ -15,15 +15,15 @@ describe("Samurai Staking Platform", function () {
 
   async function setupEscrow(admin: any, escrow: any, _stakingPlatform: any, _yen: any) {
     await escrow.connect(admin).updateStakingPlatform(_stakingPlatform.target);
-    await _yen.connect(admin).mint(admin.address, initialRewardBalance);
+    //await _yen.connect(admin).mint(admin.address, initialRewardBalance);
     await _yen.connect(admin).increaseAllowance(escrow.target, initialRewardBalance);
     await escrow.connect(admin).replenishRewards(initialRewardBalance, _yen.target);
   }
 
-  const userStake = async (amount: string, user: any, yen: any, escrow: any, feeContract: any, staking: any) => {
+  const userStake = async ( admin: any, amount: string, user: any, yen: any, escrow: any, feeContract: any, staking: any) => {
     // Mint some tokens for the user
     const initialUserBalance = parseEther(amount);
-    await yen.mint(user.address, initialUserBalance);
+    await yen.connect(admin).transfer(user.address, initialUserBalance);
 
     // Approve the escrow contract to spend tokens
     await yen.connect(user).approve(escrow.target, initialUserBalance);
@@ -168,11 +168,11 @@ describe("Samurai Staking Platform", function () {
   describe("User Staking", function () {
 
     it("Should allow a user to stake tokens", async function () {
-      const { user1, oneDayStaking, yen, stakingPlatform, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const {admin, user1, oneDayStaking, yen, stakingPlatform, escrow, feeContract } = await loadFixture(deployStakingFixture);
 
       // Mint some tokens for the user
       const initialUserBalance = parseEther("1000");
-      await yen.mint(user1.address, initialUserBalance);
+      await yen.connect(admin).transfer(user1.address, initialUserBalance);
 
       // Approve the escrow contract to spend tokens
       await yen.connect(user1).approve(escrow.target, initialUserBalance);
@@ -204,9 +204,9 @@ describe("Samurai Staking Platform", function () {
     });
 
     it("Should store the correct users staked amount in the escrow", async function () {
-      const { user1, user2, oneDayStaking, feeContract, yen, escrow } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-      await userStake("100", user2, yen, escrow, feeContract, oneDayStaking);
+      const { admin, user1, user2, oneDayStaking, feeContract, yen, escrow } = await loadFixture(deployStakingFixture);
+      await userStake(admin, "1000", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin, "100", user2, yen, escrow, feeContract, oneDayStaking);
       const stake1 = await escrow.userStakeBalances(user1, 0);
       const stake2 = await escrow.userStakeBalances(user2, 1);
       expect(Number(stake1) / 1e18).to.equal(1000);
@@ -214,9 +214,9 @@ describe("Samurai Staking Platform", function () {
     })
 
     it("Should store the correct userStake information in the staking platform", async function () {
-      const { user1, user2, oneDayStaking, feeContract, yen, escrow, stakingPlatform } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-      await userStake("2000", user2, yen, escrow, feeContract, oneDayStaking);
+      const {admin,  user1, user2, oneDayStaking, feeContract, yen, escrow, stakingPlatform } = await loadFixture(deployStakingFixture);
+      await userStake(admin, "1000", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin, "2000", user2, yen, escrow, feeContract, oneDayStaking);
       const stake1 = await stakingPlatform.getStakeData(0);
       const stake2 = await stakingPlatform.getStakeData(1);
 
@@ -243,8 +243,8 @@ describe("Samurai Staking Platform", function () {
   describe("Reward Calculation", function () {
 
     it("Should correctly calculate the reward based on the staked amount", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
+      const { admin,user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin,"1000", user1, yen, escrow, feeContract, oneDayStaking);
       const stakeInfo = await stakingPlatform.getStakeData(0);
       const expectedReward = Number(stakeInfo.amount) * 5 / 100;
       expect(Number(stakeInfo.reward)).to.equal(expectedReward);
@@ -255,8 +255,8 @@ describe("Samurai Staking Platform", function () {
   describe("User Claiming", function () {
 
     it("Should allow a user to claimStakeAndReward a stake", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
+      const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin,"1000", user1, yen, escrow, feeContract, oneDayStaking);
       await advanceTime(86400);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
@@ -265,9 +265,9 @@ describe("Samurai Staking Platform", function () {
     });
 
     it("Should allow a user to batch claimStakeAndReward multiple stakes", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
-      await userStake("2000", user1, yen, escrow, feeContract, oneDayStaking);
+      const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin, "1000", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin, "2000", user1, yen, escrow, feeContract, oneDayStaking);
       await advanceTime(86400);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).batchClaimStakesAndRewards([0, 1], { value: feeAmount + feeAmount }); // Assuming 0 and 1 are the stakeIds for this test
@@ -293,23 +293,23 @@ describe("Samurai Staking Platform", function () {
 
   describe("Revert Cases", function () {
     it("Should revert if unauthorized user tries to withdraw", async function () {
-      const { user1, user2, escrow, yen, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
-      await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking);
+      const {admin, user1, user2, escrow, yen, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin,"1000", user1, yen, escrow, feeContract, oneDayStaking);
       await expect(escrow.connect(user2).handleUserWithdraw(user1.address, 0, parseEther("100"), yen.target)).to.be.revertedWith('Caller is not the staking platform');
     });
   });
 
   describe("Event Emission", function () {
     it("Should emit UserDeposited event when a user deposits", async function () {
-      const { user1, escrow, yen, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
-      expect(await userStake("1000", user1, yen, escrow, feeContract, oneDayStaking))
+      const {admin, user1, escrow, yen, oneDayStaking, feeContract } = await loadFixture(deployStakingFixture);
+      expect(await userStake(admin,"1000", user1, yen, escrow, feeContract, oneDayStaking))
         .to.emit(escrow, 'UserDeposited')
         .withArgs(user1.address, 0, parseEther("1000"));
     });
 
     it("Should emit UserWithdrawn event when a user withdraws", async function () {
-      const { user1, escrow, yen, oneDayStaking, feeContract, stakingPlatform } = await loadFixture(deployStakingFixture);
-      await userStake("1050", user1, yen, escrow, feeContract, oneDayStaking);
+      const {admin, user1, escrow, yen, oneDayStaking, feeContract, stakingPlatform } = await loadFixture(deployStakingFixture);
+      await userStake(admin,"1050", user1, yen, escrow, feeContract, oneDayStaking);
       await advanceTime(86400);
       const feeAmount = await feeContract.fetchCurrentFee();
       expect(await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount }))
@@ -321,9 +321,9 @@ describe("Samurai Staking Platform", function () {
   describe("Claim and Reward Transfers", function () {
 
     it("Should transfer the staked amount back to the user upon claimStakeAndRewarding", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
       const initialBalance = await yen.balanceOf(user1.address);
-      await userStake("1550", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin,"1550", user1, yen, escrow, feeContract, oneDayStaking);
       const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
       await advanceTime(86400);
@@ -334,9 +334,9 @@ describe("Samurai Staking Platform", function () {
     });
 
     it("Should transfer the correct reward amount to the user upon claimStakeAndRewarding", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
+      const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
       const initialBalance = await yen.balanceOf(user1.address);
-      await userStake("2400", user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin,"2400", user1, yen, escrow, feeContract, oneDayStaking);
       const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
 
@@ -508,27 +508,27 @@ describe("Samurai Staking Platform", function () {
   describe("Multiple Staking pools - user staking ", function () {
  
     it("should allow user to stake in multiple pools", async function () {
-      const { user1, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const {admin, user1, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
       const _amount = "2000";
       const _amount1 = "1000";
       const _amount2 = "500";
 
-      await userStake(_amount, user1, yen, escrow, feeContract, oneDayStaking);
-      await userStake(_amount1, user1, yen, escrow, feeContract, oneWeekStaking);
-      await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
+      await userStake(admin,_amount, user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin,_amount1, user1, yen, escrow, feeContract, oneWeekStaking);
+      await userStake(admin,_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
 
       expect((await stakingPlatform.getUserStakeIds(user1.address)).length).to.be.equal(3);
 
     });
     it("should allow users to stake in multiple pools at the same time", async function () {
-      const { user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const {admin, user1, user2, stakingPlatform, oneDayStaking, oneWeekStaking, oneMonthStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
       const _amount = "2000";
       const _amount1 = "1000";
       const _amount2 = "500";
 
-      await userStake(_amount, user1, yen, escrow, feeContract, oneDayStaking);
-      await userStake(_amount1, user2, yen, escrow, feeContract, oneWeekStaking);
-      await userStake(_amount2, user1, yen, escrow, feeContract, oneMonthStaking);
+      await userStake(admin, _amount, user1, yen, escrow, feeContract, oneDayStaking);
+      await userStake(admin, _amount1, user2, yen, escrow, feeContract, oneWeekStaking);
+      await userStake(admin, _amount2, user1, yen, escrow, feeContract, oneMonthStaking);
 
       expect((await stakingPlatform.getUserStakeIds(user1.address)).length).to.be.equal(2);
     });
@@ -536,9 +536,9 @@ describe("Samurai Staking Platform", function () {
   });
   describe("Mapping Features", function () {
     it("Should correctly map user to their stakes", async function () {
-      const { user1, user2, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
-      await userStake("3000", user1, yen, escrow, feeContract, oneWeekStaking);
-      await userStake("2000", user2, yen, escrow, feeContract, oneWeekStaking);
+      const {admin, user1, user2, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin, "3000", user1, yen, escrow, feeContract, oneWeekStaking);
+      await userStake(admin, "2000", user2, yen, escrow, feeContract, oneWeekStaking);
   
       const user1Stakes = await stakingPlatform.getUserStakeIdsInPool(user1.address, 1);
       const user2Stakes = await stakingPlatform.getUserStakeIdsInPool(user2.address, 1);
@@ -550,8 +550,8 @@ describe("Samurai Staking Platform", function () {
     });
   
     it("Should update the mapping when a user un-stakes", async function () {
-      const { user1, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
-      await userStake("3000", user1, yen, escrow, feeContract, oneWeekStaking);
+      const {admin,  user1, stakingPlatform, yen, escrow, feeContract, oneWeekStaking } = await loadFixture(deployStakingFixture);
+      await userStake(admin, "3000", user1, yen, escrow, feeContract, oneWeekStaking);
       await advanceTime(86400*7);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });

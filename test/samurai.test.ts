@@ -78,7 +78,7 @@ describe("Samurai NFTs", function () {
         .to.emit(samurai, "WithdrawnTokens")
         .withArgs(yen.target, parseEther("1000"));
 
-      expect(await yen.balanceOf(admin.address)).to.equal(parseEther("1000000"));
+      expect(await yen.balanceOf(samurai.target)).to.equal(parseEther("0"));
     });
   });
 
@@ -111,7 +111,7 @@ describe("Samurai NFTs", function () {
       const { samurai, user1, user2 } = await loadFixture(deploySamuraiFixture);
 
       await expect(samurai.connect(user1).adminMint(user2.address, 2)).to.be.revertedWith(
-        "AccessControl: account 0x3c44cdddb6a900fa2b585dd299e03d12fa4293bc is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6"
+        "AccessControl: account 0x23795b79b17c12c9b9e92d7f0b408a2ea6287800 is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6"
       );
     });
 
@@ -152,7 +152,7 @@ describe("Samurai NFTs", function () {
     it("Should minted the correct amount", async function () {
       const { yen } = await loadFixture(deployERC20Fixture);
 
-      expect(await yen.totalSupply()).to.equal(1000000000000000000000000n);
+      expect(await yen.totalSupply()).to.equal(6000000000000000000000000000n);
     })
   });
 

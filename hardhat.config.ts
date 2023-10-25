@@ -28,33 +28,51 @@ const config: HardhatUserConfig = {
     gasPrice: 15,
     enabled: true,
   },
+  defaultNetwork: "hardhat",
   networks: {
-    // for mainnet
-    'base-mainnet': {
-      url: 'https://mainnet.base.org',
+    localhost: {
+      gas: "auto",
+      gasPrice: "auto",
       accounts: {
-        mnemonic: `${process.env.WALLET_KEY}`,
+        mnemonic: `${process.env.MNEMONIC}`,
+        accountsBalance: "10000000000000000000000"
       },
-      gasPrice: 1000000000,
     },
-    // for testnet
+    hardhat: {
+      gas: "auto",
+      gasPrice: "auto",
+      accounts: {
+        mnemonic: `${process.env.MNEMONIC}`,
+        accountsBalance: "10000000000000000000000"
+      },
+    },
     goerli: {
-      url: process.env.ALCHEMY_APIKEY_GOERLI as string,
+      url: `${process.env.ALCHEMY_APIKEY_GOERLI}`,
       chainId: 5,
-      accounts: {
-        mnemonic: `${process.env.WALLET_KEY}`,
-      },
+      accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
     },
-    // for local dev environment
-    'base-local': {
-      url: 'http://localhost:8545',
-      accounts: {
-        mnemonic: `${process.env.WALLET_KEY}`,
-      },
-      gasPrice: 10,
+    /*
+    mainnet: {
+      url: `${process.env.ALCHEMY_ETH_API_KEY}`,
+      chainId: 1,
+      accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
     },
+    */
+  }, 
+  paths: {
+    sources: "./contracts",
+    tests: "./test",
+    cache: "./cache",
+    artifacts: "./artifacts"
   },
-  defaultNetwork: 'hardhat',
+  mocha: {
+    timeout: 40000
+  },
+  etherscan: {
+    apiKey: {
+      goerli: 'WTGAMG95DQNVGWVA2FBIFKZ5SBF6Z7BQFG'
+    }
+  }
 };
 
 
