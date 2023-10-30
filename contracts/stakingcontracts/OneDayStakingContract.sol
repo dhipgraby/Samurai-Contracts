@@ -4,11 +4,12 @@ pragma solidity 0.8.19;
 import "./TokenStakingPlatform.sol";
 import "./AdminContract.sol";
 import "./FeeManagement.sol";
+import "@openzeppelin/contracts/security/Pausable.sol";
 
 /// @title One Day Staking Contract
 /// @notice This contract allows users to stake tokens for a one-day duration.
 /// @dev It interacts with the SamuraiStakingPlatform, AdminContract, and FeeContract for staking and fee calculations.
-contract OneDayStakingContract {
+contract OneDayStakingContract is Pausable {
     string private constant NOT_ADMIN_ERROR = "Caller is not an admin";
     string private constant INCORRECT_FEE_AMOUNT = "Incorrect fee sent";
     string private constant INCORRECT_AMOUNT = "Amount must be greater than zero";
@@ -54,14 +55,14 @@ contract OneDayStakingContract {
     /// @notice Allows a user to stake tokens for one day.
     /// @dev The function requires the correct fee amount to be sent along with the transaction.
     /// @param amount The amount of tokens to stake.
-    function stake(uint256 amount) external payable {
+    function stake(uint256 amount) external payable whenNotPaused() {
         uint256 _feeAmount = feeContract.fetchCurrentFee();
         require(msg.value == _feeAmount, INCORRECT_FEE_AMOUNT);
         require(amount > 0, INCORRECT_AMOUNT);
 
         // Define pool type and end timestamp for one-day staking
         uint256 poolType = 0;
-        uint256 duration = 1 days;
+        uint256 duration = 3 days;
 
         // Call the stakeTokens function in the StakingPlatform
         stakingPlatform.initiateStake{value: msg.value}(
@@ -75,7 +76,7 @@ contract OneDayStakingContract {
     /// @notice Updates the SamuraiStakingPlatform contract address.
     /// @dev Can only be called by an admin.
     /// @param newStakingPlatform The new SamuraiStakingPlatform contract address.
-    function updateStakingPlatform(address newStakingPlatform) external onlyAdmin {
+    function updateStakingPlatform(address newStakingPlatform) external onlyAdmin whenPaused(){
         stakingPlatform = TokenStakingPlatform(newStakingPlatform);
         emit StakingPlatformUpdated(newStakingPlatform);
     }
@@ -86,5 +87,22 @@ contract OneDayStakingContract {
     function updateAdminContract(address newAdminContract) external onlyAdmin {
         adminContract = AdminContract(newAdminContract);
         emit AdminContractUpdated(newAdminContract);
+    }
+
+    /// @notice Updates the PoolStatus to PAUSED.
+    /// @dev Can only be called by an admin.
+    function pausePool() external onlyAdmin whenNotPaused() {
+        super._pause();
+    }
+
+    /// @notice Updates the PoolStatus to UNPAUSED.
+    /// @dev Can only be called by an admin.
+    function unPausePool() external onlyAdmin whenPaused() {
+        super._unpause();
+    }
+
+    /// @notice Returns the PoolStatus.
+    function getPoolStatus() external view returns(bool) {
+        return super.paused();
     }
 }

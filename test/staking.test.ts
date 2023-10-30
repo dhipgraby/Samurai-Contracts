@@ -7,6 +7,7 @@ import { parseEther } from 'ethers';
 describe("Samurai Staking Platform", function () {
 
   const initialRewardBalance = parseEther("1000000000");
+  const three_days = 60 * 60 * 24 * 3;
 
   const advanceTime = async (seconds: number) => {
     await ethers.provider.send("evm_increaseTime", [seconds]);
@@ -257,7 +258,7 @@ describe("Samurai Staking Platform", function () {
     it("Should allow a user to claimStakeAndReward a stake", async function () {
       const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
       await userStake(admin,"1000", user1, yen, escrow, feeContract, oneDayStaking);
-      await advanceTime(86400);
+      await advanceTime(three_days);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
       const stakeInfo = await stakingPlatform.getStakeData(0);
@@ -268,7 +269,7 @@ describe("Samurai Staking Platform", function () {
       const {admin, user1, stakingPlatform, yen, escrow, feeContract, oneDayStaking } = await loadFixture(deployStakingFixture);
       await userStake(admin, "1000", user1, yen, escrow, feeContract, oneDayStaking);
       await userStake(admin, "2000", user1, yen, escrow, feeContract, oneDayStaking);
-      await advanceTime(86400);
+      await advanceTime(three_days);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).batchClaimStakesAndRewards([0, 1], { value: feeAmount + feeAmount }); // Assuming 0 and 1 are the stakeIds for this test
       const stakeInfo1 = await stakingPlatform.getStakeData(0);
@@ -310,7 +311,7 @@ describe("Samurai Staking Platform", function () {
     it("Should emit UserWithdrawn event when a user withdraws", async function () {
       const {admin, user1, escrow, yen, oneDayStaking, feeContract, stakingPlatform } = await loadFixture(deployStakingFixture);
       await userStake(admin,"1050", user1, yen, escrow, feeContract, oneDayStaking);
-      await advanceTime(86400);
+      await advanceTime(three_days);
       const feeAmount = await feeContract.fetchCurrentFee();
       expect(await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount }))
         .to.emit(escrow, 'UserWithdrawn')
@@ -326,7 +327,7 @@ describe("Samurai Staking Platform", function () {
       await userStake(admin,"1550", user1, yen, escrow, feeContract, oneDayStaking);
       const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
-      await advanceTime(86400);
+      await advanceTime(three_days);
       const feeAmount = await feeContract.fetchCurrentFee();
       await stakingPlatform.connect(user1).claimStakeAndReward(0, { value: feeAmount });
       const finalBalance = await yen.balanceOf(user1.address);
@@ -340,7 +341,7 @@ describe("Samurai Staking Platform", function () {
       const stakeInfo = await stakingPlatform.getStakeData(0);
       const rewardAmount = stakeInfo.reward;
 
-      await advanceTime(86400);
+      await advanceTime(three_days);
 
       const feeAmount = await feeContract.fetchCurrentFee();
 
@@ -467,6 +468,9 @@ describe("Samurai Staking Platform", function () {
     it("should allow admin to update staking platform", async function () {
       const { admin, oneDayStaking } = await loadFixture(deployStakingFixture);
       const [ newStakingPlatform ] = await ethers.getSigners();
+
+      await oneDayStaking.connect(admin).pausePool();
+      expect(await oneDayStaking.paused()).to.be.equal(true);
       await oneDayStaking.connect(admin).updateStakingPlatform(newStakingPlatform.address);
       expect(await oneDayStaking.stakingPlatform()).to.be.equal(newStakingPlatform.address);
     });
@@ -531,6 +535,16 @@ describe("Samurai Staking Platform", function () {
       await userStake(admin, _amount2, user1, yen, escrow, feeContract, oneMonthStaking);
 
       expect((await stakingPlatform.getUserStakeIds(user1.address)).length).to.be.equal(2);
+    });
+    it("should allow not allow users to stake in a PAUSED POOL", async function () {
+      const {admin, user1, oneDayStaking, yen, escrow, feeContract } = await loadFixture(deployStakingFixture);
+      const _amount = "2000";
+      await userStake(admin, _amount, user1, yen, escrow, feeContract, oneDayStaking);
+
+      expect(await oneDayStaking.connect(admin).pausePool()).to.emit(oneDayStaking, "PoolPaused");
+      await expect(userStake(admin, _amount, user1, yen, escrow, feeContract, oneDayStaking)).to.be.revertedWith('Pausable: paused');
+
+
     });
     
   });
