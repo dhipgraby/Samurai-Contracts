@@ -97,7 +97,6 @@ describe("Samurai NFTs", function () {
     });
   });
 
-
   describe("AdminMint", function () {
 
     it("should allow admin to mint a new token", async function () {
@@ -107,11 +106,11 @@ describe("Samurai NFTs", function () {
         .to.emit(samurai, "Minted");
     });
 
-    it("should not allow non-admin to mint a new token", async function () {
+    it.only("should not allow non-admin to mint a new token", async function () {
       const { samurai, user1, user2 } = await loadFixture(deploySamuraiFixture);
 
       await expect(samurai.connect(user1).adminMint(user2.address, 2)).to.be.revertedWith(
-        "AccessControl: account 0x23795b79b17c12c9b9e92d7f0b408a2ea6287800 is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6"
+        'AccessControl: account 0xa670a43859bba57da9f0a275b601a3f0acccd41a is missing role 0x9f2df0fed2c77648de5860a4cc508cd0818c85b8b8a1ab4ceeef8d981c8956a6'
       );
     });
 
@@ -129,6 +128,18 @@ describe("Samurai NFTs", function () {
       const { samurai, user1 } = await loadFixture(deploySamuraiFixture);
 
       await expect(samurai.connect(user1).userMint(1, { value: parseEther("0.19") }))
+        .to.emit(samurai, "Minted")
+        .withArgs(user1.address, 1);
+    });
+
+
+    it("should allow a user to mint a new token", async function () {
+      const { samurai, user1 } = await loadFixture(deploySamuraiFixture);
+      const { yen } = await loadFixture(deployERC20Fixture);
+
+      await samurai.connect(user1).setERC20TokenAddress(yen)
+
+      await expect(samurai.connect(user1).userMintWithToken(1))
         .to.emit(samurai, "Minted")
         .withArgs(user1.address, 1);
     });

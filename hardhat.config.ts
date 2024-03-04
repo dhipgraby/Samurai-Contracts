@@ -33,10 +33,7 @@ const config: HardhatUserConfig = {
     localhost: {
       gas: "auto",
       gasPrice: "auto",
-      accounts: {
-        mnemonic: `${process.env.MNEMONIC}`,
-        accountsBalance: "10000000000000000000000"
-      },
+      accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
     },
     hardhat: {
       gas: "auto",
@@ -58,7 +55,7 @@ const config: HardhatUserConfig = {
       accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
     },
     */
-  }, 
+  },
   paths: {
     sources: "./contracts",
     tests: "./test",
