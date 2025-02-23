@@ -19,16 +19,39 @@ contract Samurai is
 {
     /// @notice Role identifier for admin-level privileges
     bytes32 public constant ADMIN_ROLE = keccak256("ADMIN_ROLE");
-    /// @notice Role identifier for minter-level privileges
-    bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
+    
+    /// @notice Error message for token transfer failure
+    string private constant TOKEN_TRANSFER_FAILED = "Token transfer failed";
+    /// @notice Error message for ETH transfer failure
+    string private constant ETH_TRANSFER_FAILED = "ETH transfer failed";
+    /// @notice Error message for no balance available to withdraw
+    string private constant NO_CONTRACT_BALANCE = "No balance available to withdraw";
+
     /// @notice Initial price for minting an NFT in ETH
     uint256 public initialPrice = 0.19 ether;
     /// @notice Initial price for minting an NFT in ERC20 tokens
     uint256 public initialTokenPrice = 1000 ether;
+    
     /// @notice Address of the ERC20 token used for payment
     address public erc20TokenAddress;
+    /// @notice Address of the withdrawal receiver_1
+    address payable public developer1;
+    /// @notice Address of the withdrawal receiver_2
+    address payable public developer2;
+    /// @notice Address of the withdrawal receiver_3
+    address payable public artist;
+
+    /// @notice Flag to enable/disable token minting
+    bool public isTokenLive = false;
+
     /// @notice Base URI for metadata
     string private _baseURIextended;
+
+    enum AddressType {
+        Developer1,
+        Developer2,
+        Artist
+    }
 
     /// @notice Custom error to indicate that a token already exists
     error TokenExist();
@@ -38,24 +61,33 @@ contract Samurai is
     /// @param tokenId The ID of the minted token
     event Minted(address indexed to, uint256 indexed tokenId);
 
-    /// @notice Emited when the Contract balance is withdrawn.
-    /// @param balance Withdrawn balance.
-    event Withdrawn(uint256 balance);
-
     /// @notice Event emitted when a new royalty data is set
     /// @param royaltyReceiver Receiver of royalty amount
     /// @param feeNumerator The royalty fee in bips
     event RoyaltySet(address indexed royaltyReceiver, uint96 feeNumerator);
 
-    /// @notice Emited when tokens is withdrawn.
+    /// @notice Event emitted when the Contract balance is withdrawn.
+    /// @param share Withdrawn share of ETH to each address.
+    event Withdrawn(uint256 share);
+
+    /// @notice Event emitted when tokens is withdrawn.
     /// @param token Withdrawn token
-    /// @param amount Withdrawn amount
-    event WithdrawnTokens(IERC20 indexed token, uint256 amount);
+    /// @param share Withdrawn share of ETH to each address.
+    event WithdrawnTokens(IERC20 indexed token, uint256 share);
 
     /// @notice Event emitted when Ether is received
     /// @param sender Address of the sender
     /// @param amount Amount of Ether received
     event Received(address indexed sender, uint256 amount);
+
+    /// @notice Event emitted when token minting is enabled/disabled
+    /// @param status The new status of the token minting
+    event TokenLive(bool status);
+
+    /// @notice Event emitted when the contract address is updated
+    /// @param addressType The type of address being updated
+    /// @param newAddress The new address
+    event AddressUpdated(uint8 indexed addressType, address newAddress);
 
     /// @dev Checks if the token ID is valid and doesn't exist
     /// @param _tokenId The ID of the token to validate
@@ -66,14 +98,19 @@ contract Samurai is
     }
 
     /// @notice Initializes the contract, setting the roles for the deployer
-    /// @dev Default feeNumerator is 10000, which is 10%
+    /// @dev Default feeNumerator is 3000, which is 3%
     constructor(
-        address payable _royaltyReceiver
+        address payable _royaltyReceiver,
+        address payable _developer1,
+        address payable _developer2,
+        address payable _artist
     ) ERC721("LastBloodLines", "LBL") {
         _grantRole(ADMIN_ROLE, msg.sender);
-        _grantRole(MINTER_ROLE, msg.sender);
 
-        _setDefaultRoyalty(_royaltyReceiver, 10000);
+        _setDefaultRoyalty(_royaltyReceiver, 3000);
+        developer1 = _developer1;
+        developer2 = _developer2;
+        artist = _artist;
     }
 
     /// @notice Fallback function to accept Ether
@@ -81,21 +118,11 @@ contract Samurai is
         emit Received(msg.sender, msg.value);
     }
 
-    /// @notice Allows an admin to mint a new token
-    /// @param to The address to mint the token to
-    /// @param tokenId The ID of the token to mint
-    function adminMint(
-        address to,
-        uint256 tokenId
-    ) public onlyRole(MINTER_ROLE) isValidToken(tokenId) {
-        _mintToken(to, tokenId);
-    }
-
     /// @notice Allows a user to mint a new token with ETH
     /// @param tokenId The ID of the token to mint
     function userMint(uint256 tokenId) public payable isValidToken(tokenId) {
         require(
-            msg.value == (tokenId == 666 ? 666 ether : initialPrice),
+            msg.value == initialPrice,
             "Incorrect amount"
         );
         _mintToken(msg.sender, tokenId);
@@ -103,12 +130,12 @@ contract Samurai is
 
     /// @notice Allows a user to mint a new token with ERC20 tokens
     /// @param tokenId The ID of the token to mint
-    /// @dev requries ERC20 token approval to be given to this contract
+    /// @dev Requires ERC20 token approval to be given to this contract
     function userMintWithToken(uint256 tokenId) public isValidToken(tokenId) {
-        require(tokenId != 666 ,"Only ETH");
+        require(isTokenLive, "Token minting is disabled");
         require(
             IERC20(erc20TokenAddress).transferFrom(msg.sender, address(this), initialTokenPrice),
-            "Token transfer failed"
+            TOKEN_TRANSFER_FAILED
         );
         _mintToken(msg.sender, tokenId);
     }
@@ -207,25 +234,63 @@ contract Samurai is
         emit RoyaltySet(royaltyReceiver, feeNumerator);
     }
 
-    /// @notice Allows the admin to withdraw Ether from the contract
-    /// @param to The address to send Ether to
-    function withdrawEther(address payable to) external onlyRole(ADMIN_ROLE) {
+    /// @notice Allows the admin to withdraw Ether from the contract to preset accounts.
+    function withdrawEther() external onlyRole(ADMIN_ROLE) {
         uint256 balance = address(this).balance;
-        (bool success, ) = to.call{value: balance}("");
-        require(success, "Transfer failed.");
-        emit Withdrawn(balance);
+        require(balance > 0, NO_CONTRACT_BALANCE);
+
+        uint256 share = balance / 3;
+
+        (bool success1, ) = developer1.call{value: share}("");
+        require(success1, ETH_TRANSFER_FAILED);
+
+        (bool success2, ) = developer2.call{value: share}("");
+        require(success2, ETH_TRANSFER_FAILED);
+
+        (bool success3, ) = artist.call{value: share}("");
+        require(success3, ETH_TRANSFER_FAILED);
+
+        emit Withdrawn(share);
     }
 
-    /// @notice Allows the admin to withdraw ERC20 tokens from the contract
+    /// @notice Allows the admin to withdraw ERC20 tokens from the contract to preset accounts.
     /// @param contractAddress Token address to withdraw.
-    /// @param to The address to send tokens to.
-    function withdrawTokens(
-        address contractAddress,
-        address to
-    ) external onlyRole(ADMIN_ROLE) {
+    function withdrawTokens(address contractAddress) external onlyRole(ADMIN_ROLE) {
         IERC20 token = IERC20(contractAddress);
         uint256 amount = token.balanceOf(address(this));
-        require(token.transfer(to, amount), "Token transfer failed");
-        emit WithdrawnTokens(token, amount);
+        require(amount > 0, NO_CONTRACT_BALANCE);
+
+        uint256 share = amount / 3; 
+
+        require(token.transfer(developer1, share), TOKEN_TRANSFER_FAILED);
+        require(token.transfer(developer2, share), TOKEN_TRANSFER_FAILED);
+        require(token.transfer(artist, share), TOKEN_TRANSFER_FAILED);
+        emit WithdrawnTokens(token, share);
     }
+
+    /// @notice Allows the admin to enable/disable token minting
+    /// @param status The new status of the token minting
+    function setTokenLive(bool status) external onlyRole(ADMIN_ROLE) {
+        isTokenLive = status;
+        emit TokenLive(status);
+    }
+
+    /// @notice Updates an EOA address based on the type of address to be changed.
+    /// @param _type The type of address to update (0 = Developer1, 1 = Developer2, 2 = Artist).
+    /// @param _newAddress The new address.
+    function updateAddress(AddressType _type, address payable _newAddress) external onlyRole(ADMIN_ROLE) {
+        require(_newAddress != address(0), "Invalid address");
+
+        if (_type == AddressType.Developer1) {
+            developer1 = _newAddress;
+        } else if (_type == AddressType.Developer2) {
+            developer2 = _newAddress;
+        } else if (_type == AddressType.Artist) {
+            artist = _newAddress;
+        }
+
+        emit AddressUpdated(uint8(_type), _newAddress);
+    }
+
 }
+

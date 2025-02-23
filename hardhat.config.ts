@@ -25,7 +25,7 @@ const config: HardhatUserConfig = {
     coinmarketcap: '82c3ceca-d368-4e32-9296-e0ee96c95272',
     gasPriceApi: 'https://api.etherscan.io/api?module=proxy&action=eth_gasPrice',
     currency: 'EUR',
-    gasPrice: 15,
+    gasPrice: 1,
     enabled: true,
   },
   defaultNetwork: "hardhat",
@@ -43,18 +43,16 @@ const config: HardhatUserConfig = {
         accountsBalance: "10000000000000000000000"
       },
     },
-    goerli: {
-      url: `${process.env.ALCHEMY_APIKEY_GOERLI}`,
-      chainId: 5,
+    sepolia: {
+      url: `${process.env.ALCHEMY_APIKEY_SEPOLIA}`,
+      chainId: 11155111,
       accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
     },
-    /*
-    mainnet: {
-      url: `${process.env.ALCHEMY_ETH_API_KEY}`,
-      chainId: 1,
-      accounts: [`${process.env.TEST_ACCOUNT_PRIVATE_KEY}`]
+    base: {
+      url: `${process.env.ALCHEMY_BASE_API_KEY}`,
+      chainId: 8453,
+      accounts: [`${process.env.MAIN_ACCOUNT_PRIVATE_KEY}`]
     },
-    */
   },
   paths: {
     sources: "./contracts",
@@ -67,7 +65,7 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     apiKey: {
-      goerli: 'WTGAMG95DQNVGWVA2FBIFKZ5SBF6Z7BQFG'
+      base: `${process.env.BASE_SCAN_API}`,
     }
   }
 };
